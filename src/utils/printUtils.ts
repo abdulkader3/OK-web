@@ -1,14 +1,43 @@
 import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 export async function printHTML(html: string): Promise<void> {
   if (Platform.OS === 'web') {
-    return printHTMLWeb(html);
+    const isMobile = isMobileDevice();
+    if (isMobile) {
+      return printHTMLMobileWeb(html);
+    }
+    return printHTMLDesktopWeb(html);
   }
   return Print.printAsync({ html });
 }
 
-function printHTMLWeb(html: string): Promise<void> {
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+async function printHTMLMobileWeb(html: string): Promise<void> {
+  try {
+    const { uri } = await Print.printToFileAsync({ html });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        UTI: 'com.adobe.pdf',
+        dialogTitle: 'Print PDF',
+      });
+    } else {
+      const printResult = await Print.printAsync({ html });
+      return printResult;
+    }
+  } catch (err) {
+    console.error('Mobile web print error:', err);
+    throw err;
+  }
+}
+
+function printHTMLDesktopWeb(html: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -47,7 +76,7 @@ function printHTMLWeb(html: string): Promise<void> {
           iframe.contentWindow.print();
         } else {
           iframe.focus();
-          (iframe as any).contentWindow?.print?.();
+          (iframe as unknown as { contentWindow: { print?: () => void } }).contentWindow?.print?.();
         }
         cleanup();
         resolve();
