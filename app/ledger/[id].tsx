@@ -9,7 +9,7 @@ import { SuccessModal } from '@/src/components/SuccessModal';
 import { AlertModal } from '@/src/components/AlertModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Print from 'expo-print';
+import { printHTML } from '@/src/utils/printUtils';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -122,7 +122,7 @@ export default function LedgerDetailScreen() {
       };
       
       const html = generateLedgerDetailPDFHtml(ledger, payments, translations, currency);
-      await Print.printAsync({ html });
+      await printHTML(html);
     } catch (err) {
       console.error('Export error:', err);
       setAlertConfig({ variant: 'error', title: 'Export Failed', message: 'Unable to export ledger details. Please try again.' });

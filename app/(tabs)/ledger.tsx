@@ -9,7 +9,7 @@ import { calculateSummary, generateLedgerPDFHtml } from '@/src/utils/pdfTemplate
 import { AlertModal } from '@/src/components/AlertModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import * as Print from 'expo-print';
+import { printHTML } from '@/src/utils/printUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, RefreshControl, ActivityIndicator, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -90,7 +90,7 @@ export default function LedgerScreen() {
             };
             const html = generateLedgerPDFHtml(allLedgers, summary, translations, currency);
             
-            await Print.printAsync({ html });
+            await printHTML(html);
         } catch (err) {
             console.error('Export error:', err);
             setAlertConfig({ variant: 'error', title: 'Export Failed', message: 'Unable to export ledger report. Please try again.' });

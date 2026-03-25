@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import React, { useState, useMemo, useEffect } from 'react';
 import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Print from 'expo-print';
+import { printHTML } from '@/src/utils/printUtils';
 
 interface CartItem extends SaleItemType {
   productId: string;
@@ -210,7 +210,7 @@ export default function AddSaleScreen() {
       };
 
       const html = generateSingleSalePDFHtml(receiptSale, translations, currencySymbol);
-      await Print.printAsync({ html });
+      await printHTML(html);
     } catch (err) {
       console.error('Print error:', err);
       setAlertConfig({ variant: 'error', title: t('sales.error') || 'Error', message: 'Failed to generate PDF' });
