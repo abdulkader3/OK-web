@@ -125,7 +125,8 @@ export default function LedgerDetailScreen() {
       await printHTML(html);
     } catch (err) {
       console.error('Export error:', err);
-      setAlertConfig({ variant: 'error', title: 'Export Failed', message: 'Unable to export ledger details. Please try again.' });
+      const errorMessage = err instanceof Error ? err.message : 'Unable to export ledger details. Please try again.';
+      setAlertConfig({ variant: 'error', title: 'Export Failed', message: errorMessage });
       setShowAlert(true);
     } finally {
       setExporting(false);

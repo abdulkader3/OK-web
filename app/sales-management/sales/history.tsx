@@ -253,7 +253,8 @@ export default function SalesHistoryScreen() {
       await printHTML(html);
     } catch (err) {
       console.error('Export error:', err);
-      setAlertConfig({ variant: 'error', title: t('sales.error'), message: 'Failed to export PDF' });
+      const errorMessage = err instanceof Error ? err.message : 'Failed to export PDF';
+      setAlertConfig({ variant: 'error', title: t('sales.error'), message: errorMessage });
       setShowAlert(true);
     } finally {
       setExporting(false);
