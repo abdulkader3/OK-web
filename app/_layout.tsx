@@ -123,7 +123,7 @@ function AuthNavigator() {
         }}
       />
       <Stack.Screen
-        name="monthly-balance/index"
+        name="monthly-balance"
         options={{
           presentation: 'card',
           headerShown: false,

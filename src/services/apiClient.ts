@@ -10,6 +10,10 @@ const getBaseUrl = (): string => {
     return envUrl;
   }
 
+  if (API_URL) {
+    return API_URL;
+  }
+
   if (Platform.OS === 'web') {
     if (typeof window !== 'undefined' && window.location?.origin) {
       return window.location.origin;
@@ -17,7 +21,7 @@ const getBaseUrl = (): string => {
     return 'http://localhost:4000';
   }
 
-  return API_URL || 'http://localhost:4000';
+  return 'http://localhost:4000';
 };
 
 const BASE_URL = getBaseUrl();

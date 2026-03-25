@@ -262,7 +262,7 @@ export default function DashboardScreen() {
                 backgroundColor={Colors.light.cardOwed}
                 iconColor={Colors.light.primaryMuted}
                 amountColor={Colors.light.primary}
-                onPress={() => router.push('/monthly-balance/index' as any)}
+                onPress={() => router.push('/monthly-balance')}
               />
               <SummaryCard
                 icon="point-of-sale"
@@ -302,7 +302,7 @@ export default function DashboardScreen() {
           {monthlyBalance && (
             <MonthlyBalanceCard
               data={monthlyBalance}
-              onViewHistory={() => router.push('/monthly-balance/index' as any)}
+              onViewHistory={() => router.push('/monthly-balance')}
             />
           )}
 
