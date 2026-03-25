@@ -10,6 +10,8 @@ import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { LanguageProvider } from '@/src/contexts/LanguageContext';
 import { CurrencyProvider } from '@/src/contexts/CurrencyContext';
 import { SalesProvider } from '@/src/contexts/SalesContext';
+import { SyncProvider } from '@/src/contexts/SyncContext';
+import { GlobalSyncIndicator } from '@/src/components/GlobalSyncIndicator';
 import { Colors } from '@/constants/theme';
 
 function AuthNavigator() {
@@ -146,8 +148,11 @@ export default function RootLayout() {
         <CurrencyProvider>
           <AuthProvider>
             <SalesProvider>
-              <AuthNavigator />
-              <StatusBar style="auto" />
+              <SyncProvider>
+                <AuthNavigator />
+                <GlobalSyncIndicator />
+                <StatusBar style="auto" />
+              </SyncProvider>
             </SalesProvider>
           </AuthProvider>
         </CurrencyProvider>
