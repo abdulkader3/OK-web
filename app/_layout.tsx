@@ -2,8 +2,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
@@ -13,6 +13,7 @@ import { SalesProvider } from '@/src/contexts/SalesContext';
 import { SyncProvider } from '@/src/contexts/SyncContext';
 import { GlobalSyncIndicator } from '@/src/components/GlobalSyncIndicator';
 import { ConfirmModal } from '@/src/components/ConfirmModal';
+import { LogoutModalProvider, useLogoutModal } from '@/src/contexts/LogoutModalContext';
 import { Colors, DeviceType } from '@/constants/theme';
 import { Sidebar } from '@/components/Sidebar';
 
@@ -22,7 +23,7 @@ function AuthNavigator() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = DeviceType.isDesktop(width);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { showLogoutConfirm, setShowLogoutConfirm } = useLogoutModal();
 
   const isAuthScreen = segments[0] === 'login' || segments[0] === 'register';
 
@@ -143,10 +144,14 @@ function AuthNavigator() {
 
   const content = renderContent();
 
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
   if (isDesktop && !isAuthScreen) {
     return (
       <View style={{ flex: 1, flexDirection: 'row' }}>
-        <Sidebar onLogout={() => setShowLogoutConfirm(true)} />
+        <Sidebar onLogout={handleLogout} />
         <View style={{ flex: 1 }}>{content}</View>
         <ConfirmModal
           visible={showLogoutConfirm}
@@ -195,9 +200,11 @@ export default function RootLayout() {
           <AuthProvider>
             <SalesProvider>
               <SyncProvider>
-                <AuthNavigator />
-                <GlobalSyncIndicator />
-                <StatusBar style="auto" />
+                <LogoutModalProvider>
+                  <AuthNavigator />
+                  <GlobalSyncIndicator />
+                  <StatusBar style="auto" />
+                </LogoutModalProvider>
               </SyncProvider>
             </SalesProvider>
           </AuthProvider>

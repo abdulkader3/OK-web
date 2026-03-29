@@ -1,17 +1,19 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, useWindowDimensions } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { BorderRadius, Colors, FontSize, FontWeight, DeviceType } from "@/constants/theme";
+import { BorderRadius, Colors, FontSize, FontWeight, DeviceType, Spacing } from "@/constants/theme";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { useLogoutModal } from "@/src/contexts/LogoutModalContext";
 
 export default function TabLayout() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = DeviceType.isDesktop(width);
+  const { triggerLogout } = useLogoutModal();
 
   const screenOptions = {
     tabBarActiveTintColor: Colors.light.primary,
@@ -26,6 +28,11 @@ export default function TabLayout() {
       color: Colors.light.text,
     },
     headerShadowVisible: false,
+    headerRight: () => (
+      <TouchableOpacity onPress={triggerLogout} style={{ padding: Spacing.sm }}>
+        <MaterialIcons name="logout" size={24} color={Colors.light.text} />
+      </TouchableOpacity>
+    ),
     tabBarButton: HapticTab,
     tabBarStyle: {
       backgroundColor: Colors.light.surface,
