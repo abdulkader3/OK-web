@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Spacing, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useSales } from '@/src/contexts/SalesContext';
 import { ImagePickerField } from '@/src/components/sales';
@@ -6,12 +6,14 @@ import { ConfirmModal } from '@/src/components/ConfirmModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddProductScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
   const { addProduct } = useSales();
   
   const [name, setName] = useState('');
@@ -67,7 +69,7 @@ export default function AddProductScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.container}>
+        <View style={[styles.container, isDesktop && styles.containerDesktop]}>
           <View style={styles.header}>
             <TouchableOpacity 
               onPress={handleCancel} 
@@ -162,6 +164,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  containerDesktop: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

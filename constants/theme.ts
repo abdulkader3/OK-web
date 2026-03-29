@@ -94,6 +94,8 @@ export const Spacing = {
   xl: 20,
   xxl: 24,
   xxxl: 32,
+  xxxxl: 48,
+  xxxxy: 64,
 };
 
 export const BorderRadius = {
@@ -159,3 +161,29 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   },
 });
+
+export const Breakpoints = {
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+  wide: 1440,
+};
+
+export const DeviceType = {
+  isMobile: (width: number) => width < Breakpoints.tablet,
+  isTablet: (width: number) => width >= Breakpoints.tablet && width < Breakpoints.desktop,
+  isDesktop: (width: number) => width >= Breakpoints.desktop,
+};
+
+export const ResponsiveSpacing = {
+  getHorizontalPadding: (width: number) => {
+    if (DeviceType.isMobile(width)) return Spacing.xl;
+    if (DeviceType.isTablet(width)) return Spacing.xxxl;
+    return Spacing.xxxxl;
+  },
+  getMaxContentWidth: (width: number) => {
+    if (DeviceType.isMobile(width)) return width;
+    if (DeviceType.isTablet(width)) return 720;
+    return 1200;
+  },
+};

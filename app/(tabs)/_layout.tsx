@@ -1,77 +1,58 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs } from "expo-router";
-import React, { useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import React from "react";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { BorderRadius, Colors, FontSize, FontWeight } from "@/constants/theme";
+import { BorderRadius, Colors, FontSize, FontWeight, DeviceType } from "@/constants/theme";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { ConfirmModal } from "@/src/components/ConfirmModal";
 
 export default function TabLayout() {
-  const { user, logout } = useAuth();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
 
-  const handleLogout = () => {
-    setShowLogoutConfirm(true);
+  const screenOptions = {
+    tabBarActiveTintColor: Colors.light.primary,
+    tabBarInactiveTintColor: Colors.light.tabIconDefault,
+    headerShown: !isDesktop,
+    headerStyle: {
+      backgroundColor: Colors.light.surface,
+    },
+    headerTitleStyle: {
+      fontWeight: FontWeight.bold,
+      fontSize: FontSize.lg,
+      color: Colors.light.text,
+    },
+    headerShadowVisible: false,
+    tabBarButton: HapticTab,
+    tabBarStyle: {
+      backgroundColor: Colors.light.surface,
+      borderTopWidth: 0,
+      height: Platform.OS === "ios" ? 88 : 64,
+      paddingBottom: Platform.OS === "ios" ? 28 : 8,
+      paddingTop: 8,
+      ...Platform.select({
+        web: {
+          height: 64,
+          paddingBottom: 8,
+        },
+      }),
+      shadowColor: "#1C2D3A",
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 8,
+    } as any,
+    tabBarLabelStyle: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.medium,
+    },
   };
 
-  // Always render staff tab - handle permission at screen level
-  // This avoids the expo-router warning about non-Screen children
-
   return (
-    <>
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.light.primary,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: Colors.light.surface,
-        },
-        headerTitleStyle: {
-          fontWeight: FontWeight.bold,
-          fontSize: FontSize.lg,
-          color: Colors.light.text,
-        },
-        headerShadowVisible: false,
-        headerRight: () => (
-          <View style={styles.headerRight}>
-            <MaterialIcons
-              name="logout"
-              size={24}
-              color={Colors.light.textSecondary}
-              onPress={handleLogout}
-              style={styles.logoutIcon}
-            />
-          </View>
-        ),
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: Colors.light.surface,
-          borderTopWidth: 0,
-          height: Platform.OS === "ios" ? 88 : 64,
-          paddingBottom: Platform.OS === "ios" ? 28 : 8,
-          paddingTop: 8,
-          ...Platform.select({
-            web: {
-              height: 64,
-              paddingBottom: 8,
-            },
-          }),
-          shadowColor: "#1C2D3A",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: FontSize.xs,
-          fontWeight: FontWeight.medium,
-        },
-      }}
-    >
+    <Tabs screenOptions={screenOptions}>
       <Tabs.Screen
         name="index"
         options={{
@@ -118,20 +99,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-
-    <ConfirmModal
-      visible={showLogoutConfirm}
-      title="Logout"
-      message="Are you sure you want to logout?"
-      confirmText="Logout"
-      destructive
-      onConfirm={() => {
-        setShowLogoutConfirm(false);
-        logout();
-      }}
-      onCancel={() => setShowLogoutConfirm(false)}
-    />
-    </>
   );
 }
 
@@ -140,13 +107,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary + "12",
     borderRadius: BorderRadius.full,
     padding: 6,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingRight: 16,
-  },
-  logoutIcon: {
-    padding: 4,
   },
 });

@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
 import { useSales } from '@/src/contexts/SalesContext';
@@ -11,7 +11,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { printHTML } from '@/src/utils/printUtils';
 import React, { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type QuickFilter = 'yesterday' | 'today' | 'thisWeek' | 'thisMonth' | 'all' | 'custom';
@@ -88,6 +88,8 @@ export default function SalesHistoryScreen() {
   const { t } = useLanguage();
   const { formatMoney, currency } = useCurrency();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
   const { deleteSale, syncAll, isSyncing } = useSales();
 
   const [loading, setLoading] = useState(true);
@@ -357,8 +359,8 @@ export default function SalesHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, isDesktop && styles.containerDesktop]}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity 
             onPress={() => router.back()} 
             style={styles.backButton}
@@ -403,7 +405,7 @@ export default function SalesHistoryScreen() {
         </View>
 
         {quickFilter !== 'all' && (
-          <View style={styles.summaryBar}>
+          <View style={[styles.summaryBar, isDesktop && styles.summaryBarDesktop]}>
             <Text style={styles.summaryText}>
               {getActiveFilterLabel()}: {formatCurrency(totalAmount)}
             </Text>
@@ -424,7 +426,7 @@ export default function SalesHistoryScreen() {
             data={groupedSales}
             keyExtractor={(item) => item.date}
             renderItem={renderDateSection}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -438,8 +440,8 @@ export default function SalesHistoryScreen() {
           animationType="slide"
           onRequestClose={() => setShowFilter(false)}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowFilter(false)}>
-            <Pressable style={styles.filterModal} onPress={() => {}}>
+          <Pressable style={[styles.modalOverlay, isDesktop && styles.modalOverlayDesktop]} onPress={() => setShowFilter(false)}>
+            <Pressable style={[styles.filterModal, isDesktop && styles.filterModalDesktop]} onPress={() => {}}>
               <View style={styles.filterHeader}>
                 <Text style={styles.filterTitle}>{t('sales.filterByDate')}</Text>
                 <TouchableOpacity onPress={() => setShowFilter(false)}>
@@ -578,6 +580,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  containerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -594,6 +601,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+  },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   backButton: {
     padding: Spacing.xs,
@@ -619,6 +629,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.md,
   },
+  summaryBarDesktop: {
+    marginHorizontal: Spacing.xxxl,
+  },
   summaryText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
@@ -631,6 +644,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: Spacing.lg,
+  },
+  listContentDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   sectionSeparator: {
     height: Spacing.lg,
@@ -775,12 +791,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalOverlayDesktop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   filterModal: {
     backgroundColor: Colors.light.surface,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
+  },
+  filterModalDesktop: {
+    borderRadius: BorderRadius.xl,
+    maxWidth: 500,
+    margin: 'auto',
+    marginBottom: 'auto',
   },
   filterHeader: {
     flexDirection: 'row',

@@ -1,20 +1,23 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Spacing, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { ActionCard, SalesSyncIndicator } from '@/src/components/sales';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SalesDashboardScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
+  const isTablet = DeviceType.isTablet(width);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity 
             onPress={() => router.back()} 
             style={styles.backButton}
@@ -26,8 +29,8 @@ export default function SalesDashboardScreen() {
           <SalesSyncIndicator />
         </View>
 
-        <View style={styles.content}>
-          <View style={styles.actionsGrid}>
+        <View style={[styles.content, (isDesktop || isTablet) && styles.contentDesktop]}>
+          <View style={[styles.actionsGrid, isDesktop && styles.actionsGridDesktop]}>
             <ActionCard
               icon="add-box"
               title={t('sales.addProduct')}
@@ -75,6 +78,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Spacing.md,
   },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   backButton: {
     padding: Spacing.xs,
   },
@@ -87,9 +96,18 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Spacing.lg,
   },
+  contentDesktop: {
+    paddingHorizontal: Spacing.xxxl,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.md,
+  },
+  actionsGridDesktop: {
+    gap: Spacing.lg,
   },
 });

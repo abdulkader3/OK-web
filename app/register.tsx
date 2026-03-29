@@ -308,6 +308,9 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   formTitle: {
     fontSize: FontSize.xxl,

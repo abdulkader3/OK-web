@@ -1,7 +1,7 @@
 import { DebtEntryCard } from '@/components/debt-entry-card';
 import { FABButton } from '@/components/fab-button';
 import { FilterPills } from '@/components/filter-pills';
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import { getLedgers, Ledger } from '@/services/ledgerService';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
@@ -11,7 +11,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { printHTML } from '@/src/utils/printUtils';
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, RefreshControl, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, RefreshControl, ActivityIndicator, Modal, Pressable, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type FilterType = 'All' | 'Lent' | 'Borrowed' | 'Overdue' | 'Settled';
@@ -19,6 +19,8 @@ type FilterType = 'All' | 'Lent' | 'Borrowed' | 'Overdue' | 'Settled';
 export default function LedgerScreen() {
     const router = useRouter();
     const { t } = useLanguage();
+    const { width } = useWindowDimensions();
+    const isDesktop = DeviceType.isDesktop(width);
     const { formatMoney, currency } = useCurrency();
     const [searchText, setSearchText] = useState('');
     const [ledgers, setLedgers] = useState<Ledger[]>([]);
@@ -177,9 +179,9 @@ export default function LedgerScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
-            <View style={styles.container}>
+            <View style={[styles.container, isDesktop && styles.containerDesktop]}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, isDesktop && styles.headerDesktop]}>
                     <View style={{ width: 24 }} />
                     <Text style={styles.headerTitle}>{t('ledger.title')}</Text>
                     <TouchableOpacity 
@@ -201,7 +203,7 @@ export default function LedgerScreen() {
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                     }
@@ -303,8 +305,8 @@ export default function LedgerScreen() {
                     animationType="slide"
                     onRequestClose={() => setShowDateFilter(false)}
                 >
-                    <Pressable style={styles.dateModalOverlay} onPress={() => setShowDateFilter(false)}>
-                        <Pressable style={[styles.dateModalContent, Shadow.lg]} onPress={(e) => e.stopPropagation()}>
+                    <Pressable style={[styles.dateModalOverlay, isDesktop && styles.dateModalOverlayDesktop]} onPress={() => setShowDateFilter(false)}>
+                        <Pressable style={[styles.dateModalContent, Shadow.lg, isDesktop && styles.dateModalContentDesktop]} onPress={(e) => e.stopPropagation()}>
                             <View style={styles.dateModalHeader}>
                                 <Text style={styles.dateModalTitle}>{t('ledger.filterByDueDate')}</Text>
                                 <TouchableOpacity onPress={() => setShowDateFilter(false)}>
@@ -375,12 +377,20 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.light.background,
     },
+    containerDesktop: {
+        maxWidth: 1200,
+        alignSelf: 'center',
+        width: '100%',
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.xl,
         paddingVertical: Spacing.lg,
+    },
+    headerDesktop: {
+        paddingHorizontal: Spacing.xxxl,
     },
     headerTitle: {
         fontSize: FontSize.xl,
@@ -409,6 +419,9 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: Spacing.xl,
         paddingBottom: 120,
+    },
+    scrollContentDesktop: {
+        paddingHorizontal: Spacing.xxxl,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -509,11 +522,20 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
+    dateModalOverlayDesktop: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     dateModalContent: {
         backgroundColor: Colors.light.surface,
         borderTopLeftRadius: BorderRadius.xxl,
         borderTopRightRadius: BorderRadius.xxl,
         paddingBottom: Spacing.xxxl,
+    },
+    dateModalContentDesktop: {
+        borderRadius: BorderRadius.xl,
+        maxWidth: 500,
+        marginBottom: 'auto',
     },
     dateModalHeader: {
         flexDirection: 'row',

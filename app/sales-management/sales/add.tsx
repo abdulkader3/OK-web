@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Spacing, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
 import { useSales, SaleItem as SaleItemType, Sale } from '@/src/contexts/SalesContext';
@@ -11,7 +11,7 @@ import { FallbackImage } from '@/src/components/FallbackImage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useState, useMemo, useEffect } from 'react';
-import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { printHTML } from '@/src/utils/printUtils';
 
@@ -23,6 +23,9 @@ export default function AddSaleScreen() {
   const { t } = useLanguage();
   const { formatMoney, currencySymbol } = useCurrency();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
+  const isTablet = DeviceType.isTablet(width);
   const { products, addSale, sales } = useSales();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
@@ -232,7 +235,7 @@ export default function AddSaleScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity 
             onPress={cart.length > 0 ? openDiscardConfirm : () => router.back()} 
             style={styles.backButton}
@@ -261,8 +264,8 @@ export default function AddSaleScreen() {
             description={t('sales.addProductsFirst')}
           />
         ) : (
-          <View style={styles.content}>
-            <View style={styles.searchContainer}>
+          <View style={[styles.content, isDesktop && styles.contentDesktop]}>
+            <View style={[styles.searchContainer, isDesktop && styles.searchContainerDesktop]}>
               <MaterialIcons name="search" size={20} color={Colors.light.textMuted} />
               <TextInput
                 style={styles.searchInput}
@@ -276,22 +279,22 @@ export default function AddSaleScreen() {
             <FlatList
               data={filteredProducts}
               keyExtractor={(item) => item._id}
-              numColumns={2}
-              contentContainerStyle={styles.productGrid}
+              numColumns={isDesktop ? 4 : 2}
+              contentContainerStyle={[styles.productGrid, isDesktop && styles.productGridDesktop]}
               renderItem={({ item }) => (
                 <TouchableOpacity 
-                  style={styles.productItem}
+                  style={[styles.productItem, isDesktop && styles.productItemDesktop]}
                   onPress={() => addToCart(item)}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.productImageContainer}>
+                  <View style={[styles.productImageContainer, isDesktop && styles.productImageContainerDesktop]}>
                     <FallbackImage
                       uri={item.imageUri || item.imageUrl}
                       style={styles.productImage}
                     />
                   </View>
-                  <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.productPrice}>{formatCurrency(item.price)}</Text>
+                  <Text style={[styles.productName, isDesktop && styles.productNameDesktop]} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.productPrice, isDesktop && styles.productPriceDesktop]}>{formatCurrency(item.price)}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -299,7 +302,7 @@ export default function AddSaleScreen() {
         )}
 
         {cart.length > 0 && (
-          <View style={styles.cartPanel}>
+          <View style={[styles.cartPanel, isDesktop && styles.cartPanelDesktop]}>
             <Text style={styles.cartTitle}>{t('sales.selectedItems')} ({cart.length})</Text>
             <ScrollView style={styles.cartItems}>
               {cart.map(item => (
@@ -364,8 +367,8 @@ export default function AddSaleScreen() {
           transparent
           onRequestClose={() => setShowLedgerModal(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <View style={[styles.modalOverlay, isDesktop && styles.modalOverlayDesktop]}>
+            <View style={[styles.modalContent, isDesktop && styles.modalContentDesktop]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{t('sales.selectCustomer')}</Text>
                 <TouchableOpacity onPress={() => setShowLedgerModal(false)}>
@@ -407,8 +410,8 @@ export default function AddSaleScreen() {
           transparent
           onRequestClose={handleCloseReceipt}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.receiptModalContent}>
+          <View style={[styles.modalOverlay, isDesktop && styles.modalOverlayDesktop]}>
+            <View style={[styles.receiptModalContent, isDesktop && styles.receiptModalContentDesktop]}>
               <ScrollView style={styles.receiptScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.receiptCard}>
                   <View style={styles.receiptHeader}>
@@ -537,12 +540,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  containerDesktop: {
+    maxWidth: '100%',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerDesktop: {
+    paddingHorizontal: Spacing.lg,
+    paddingRight: 340,
   },
   backButton: {
     padding: Spacing.xs,
@@ -566,6 +576,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentDesktop: {
+    flex: 1,
+    paddingRight: 340,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -577,6 +591,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
+  searchContainerDesktop: {
+    marginHorizontal: Spacing.lg,
+    marginRight: 340,
+  },
   searchInput: {
     flex: 1,
     paddingVertical: Spacing.md,
@@ -587,6 +605,12 @@ const styles = StyleSheet.create({
   productGrid: {
     padding: Spacing.lg,
   },
+  productGridDesktop: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingRight: 340,
+    flex: 1,
+  },
   productItem: {
     flex: 1,
     margin: Spacing.xs,
@@ -596,6 +620,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: '48%',
   },
+  productItemDesktop: {
+    maxWidth: '25%',
+    padding: Spacing.sm,
+    margin: Spacing.xs,
+  },
   productImageContainer: {
     width: 80,
     height: 80,
@@ -603,6 +632,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.sm,
     backgroundColor: Colors.light.backgroundAlt,
+  },
+  productImageContainerDesktop: {
+    width: 60,
+    height: 60,
   },
   productImage: {
     width: '100%',
@@ -621,10 +654,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
+  productNameDesktop: {
+    fontSize: FontSize.sm,
+  },
   productPrice: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     color: Colors.light.primary,
+  },
+  productPriceDesktop: {
+    fontSize: FontSize.sm,
   },
   cartPanel: {
     backgroundColor: Colors.light.surface,
@@ -633,6 +672,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
     maxHeight: '40%',
+  },
+  cartPanelDesktop: {
+    width: 320,
+    position: 'absolute',
+    right: Spacing.lg,
+    top: 60,
+    bottom: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    maxHeight: 'none',
+    flex: undefined,
   },
   cartTitle: {
     fontSize: FontSize.md,
@@ -650,12 +701,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalOverlayDesktop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalContent: {
     backgroundColor: Colors.light.surface,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.lg,
     maxHeight: '60%',
+  },
+  modalContentDesktop: {
+    borderRadius: BorderRadius.xl,
+    maxHeight: '70%',
+    maxWidth: 500,
+    width: '100%',
+    margin: Spacing.xxxl,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -736,6 +798,11 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     maxHeight: '85%',
     flex: 1,
+  },
+  receiptModalContentDesktop: {
+    borderRadius: BorderRadius.xl,
+    maxWidth: 600,
+    margin: 'auto',
   },
   receiptHeader: {
     flexDirection: 'row',

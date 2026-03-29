@@ -1,11 +1,11 @@
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '@/constants/theme';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
 import { getMonthlyHistory, getMonthlySummary, MonthlyHistoryItem, MonthlyBalanceData } from '@/src/services/monthlyBalanceService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MONTH_NAMES_EN = [
@@ -22,6 +22,8 @@ export default function MonthlyBalanceHistoryScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { formatMoney } = useCurrency();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
   const [history, setHistory] = useState<MonthlyHistoryItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState<MonthlyBalanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,9 +143,9 @@ export default function MonthlyBalanceHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
+      <View style={[styles.container, isDesktop && styles.containerDesktop]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
@@ -159,7 +161,7 @@ export default function MonthlyBalanceHistoryScreen() {
           data={allMonths}
           keyExtractor={(item) => `${item.year}-${item.month}`}
           renderItem={({ item }) => renderMonthItem(item, item.isCurrentMonth)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -183,6 +185,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  containerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -198,6 +205,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
   },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
+  },
   backButton: {
     padding: Spacing.xs,
   },
@@ -212,6 +222,9 @@ const styles = StyleSheet.create({
   listContent: {
     padding: Spacing.md,
     gap: Spacing.md,
+  },
+  listContentDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   monthCard: {
     backgroundColor: Colors.light.surface,

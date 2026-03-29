@@ -1,4 +1,5 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
+import { useWindowDimensions } from 'react-native';
 import { addDebt, deleteLedger, getLedgerById, Ledger, updateLedger, UpdateLedgerData } from '@/services/ledgerService';
 import { getPaymentById, getPayments, Payment } from '@/services/paymentService';
 import { useLanguage } from '@/src/contexts/LanguageContext';
@@ -32,6 +33,9 @@ import { usePermissions } from '@/src/hooks/usePermissions';
 export default function LedgerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
+  const isTablet = DeviceType.isTablet(width);
   const { canEditLedger, canDeleteLedger } = usePermissions();
   const { t } = useLanguage();
   const { formatMoney, currency } = useCurrency();
@@ -300,14 +304,415 @@ export default function LedgerDetailScreen() {
     );
   }
 
+  const containerPadding = isDesktop ? 80 : isTablet ? 40 : Spacing.xl;
+
+  if (isDesktop) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.scrollContentDesktop}
+        >
+          <View style={styles.desktopLayout}>
+            {/* Left Column - Ledger Details */}
+            <View style={styles.leftColumn}>
+              <View style={[styles.header, styles.headerDesktop]}>
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+                  <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{t('ledgerDetail.title')}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity activeOpacity={0.7} onPress={handleExportPDF} disabled={exporting}>
+                    {exporting ? (
+                      <ActivityIndicator size="small" color={Colors.light.text} />
+                    ) : (
+                      <MaterialIcons name="file-download" size={24} color={Colors.light.text} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => setShowMenu(true)}>
+                    <MaterialIcons name="more-vert" size={24} color={Colors.light.text} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Ledger Summary Card */}
+              <View style={[styles.summaryCard, Shadow.md, styles.summaryCardDesktop]}>
+                <View style={[styles.summaryHeader, styles.summaryHeaderDesktop]}>
+                  <View style={[styles.avatar, styles.avatarDesktop]}>
+                    <Text style={[styles.avatarText, styles.avatarTextDesktop]}>
+                      {ledger.counterpartyName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryInfo}>
+                    <Text style={[styles.counterpartyName, styles.counterpartyNameDesktop]}>{ledger.counterpartyName}</Text>
+                    <View style={[styles.typeBadge, ledger.type === 'owes_me' ? styles.typeBadgeOwes : styles.typeBadgeOwe]}>
+                      <MaterialIcons
+                        name={ledger.type === 'owes_me' ? 'arrow-upward' : 'arrow-downward'}
+                        size={14}
+                        color={ledger.type === 'owes_me' ? Colors.light.accentTeal : Colors.light.accentOrange}
+                      />
+                      <Text style={[styles.typeText, ledger.type === 'owes_me' ? styles.typeTextOwes : styles.typeTextOwe]}>
+                        {ledger.type === 'owes_me' ? 'They owe me' : 'I owe them'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={[styles.amountRow, styles.amountRowDesktop]}>
+                  <View style={[styles.amountItem, styles.amountItemDesktop]}>
+                    <Text style={[styles.amountLabel, styles.amountLabelDesktop]}>{t('ledgerDetail.initial')}</Text>
+                    <Text style={[styles.amountValue, styles.amountValueDesktop]}>{formatMoney(computedInitialAmount)}</Text>
+                  </View>
+                  <View style={[styles.amountItem, styles.amountItemDesktop]}>
+                    <Text style={[styles.amountLabel, styles.amountLabelDesktop]}>{t('ledgerDetail.outstanding')}</Text>
+                    <Text style={[styles.amountValue, styles.outstandingAmount, styles.amountValueDesktop]}>
+                      {formatMoney(ledger.outstandingBalance)}
+                    </Text>
+                  </View>
+                  <View style={[styles.amountItem, styles.amountItemDesktop]}>
+                    <Text style={[styles.amountLabel, styles.amountLabelDesktop]}>{t('ledgerDetail.dueDate')}</Text>
+                    <Text style={[styles.amountValue, styles.amountValueDesktop]}>
+                      {ledger.dueDate ? formatDate(ledger.dueDate) : t('ledgerDetail.na')}
+                    </Text>
+                  </View>
+                </View>
+
+                {ledger.notes && (
+                  <View style={styles.notesSection}>
+                    <Text style={styles.notesLabel}>{t('common.notes')}</Text>
+                    <Text style={styles.notesText}>{ledger.notes}</Text>
+                  </View>
+                )}
+
+                {ledger.tags && ledger.tags.length > 0 && (
+                  <View style={styles.tagsSection}>
+                    <Text style={styles.notesLabel}>{t('common.tags')}</Text>
+                    <View style={styles.tagsRow}>
+                      {ledger.tags.map((tag, index) => (
+                        <View key={index} style={styles.tag}>
+                          <Text style={styles.tagText}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtonsColumn}>
+                {ledger.outstandingBalance > 0 && (
+                  <TouchableOpacity
+                    style={[styles.recordPaymentBtn, Shadow.sm, styles.recordPaymentBtnDesktop]}
+                    activeOpacity={0.8}
+                    onPress={() => router.push({ pathname: '/modal', params: { ledgerId: ledger._id, outstandingBalance: ledger.outstandingBalance } })}
+                  >
+                    <MaterialIcons name="add" size={20} color={Colors.light.textInverse} />
+                    <Text style={[styles.recordPaymentText, styles.recordPaymentTextDesktop]}>{t('ledgerDetail.recordPayment')}</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.addDebtBtn, Shadow.sm, styles.addDebtBtnDesktop]}
+                  activeOpacity={0.8}
+                  onPress={() => setShowAddDebtModal(true)}
+                >
+                  <MaterialIcons name="trending-up" size={20} color={Colors.light.textInverse} />
+                  <Text style={styles.addDebtText}>{t('ledgerDetail.addMoreDebt')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Right Column - Payment History */}
+            <View style={styles.rightColumn}>
+              <Text style={[styles.sectionTitle, styles.sectionTitleDesktop]}>{t('ledgerDetail.paymentHistory')}</Text>
+
+              {payments.length === 0 ? (
+                <View style={styles.emptyPayments}>
+                  <MaterialIcons name="receipt-long" size={40} color={Colors.light.textMuted} />
+                  <Text style={styles.emptyText}>{t('ledgerDetail.noPaymentsYet')}</Text>
+                </View>
+              ) : (
+                payments.map((payment) => (
+                  <TouchableOpacity
+                    key={payment._id}
+                    style={[styles.paymentCard, Shadow.sm, styles.paymentCardDesktop]}
+                    onPress={() => handlePaymentClick(payment)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.paymentHeader}>
+                      <View style={styles.paymentAmountContainer}>
+                        <Text style={[styles.paymentAmount, payment.type === 'adjustment' && styles.paymentAmountPositive]}>
+                          {payment.type === 'adjustment' ? '+' : '-'}{formatMoney(payment.amount)}
+                        </Text>
+                        <View style={[styles.paymentTypeBadge, payment.type === 'adjustment' ? styles.paymentTypeBadgeAdjustment : styles.paymentTypeBadgePayment]}>
+                          <Text style={styles.paymentTypeText}>
+                            {payment.type.charAt(0).toUpperCase() + payment.type.slice(1)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.paymentDate}>{formatDate(payment.recordedAt)}</Text>
+                    </View>
+
+                    <View style={styles.paymentDetails}>
+                      <View style={styles.paymentDetailRow}>
+                        <MaterialIcons name="account-balance-wallet" size={16} color={Colors.light.textMuted} />
+                        <Text style={styles.paymentDetailText}>
+                          {payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+                        </Text>
+                      </View>
+                      <View style={styles.paymentDetailRow}>
+                        <MaterialIcons name="person" size={16} color={Colors.light.textMuted} />
+                        <Text style={styles.paymentDetailText}>
+                          Recorded by {payment.recordedBy.name}
+                        </Text>
+                      </View>
+                      {payment.note && (
+                        <View style={styles.paymentDetailRow}>
+                          <MaterialIcons name="notes" size={16} color={Colors.light.textMuted} />
+                          <Text style={styles.paymentDetailText}>{payment.note}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.balanceInfo}>
+                      <Text style={styles.balanceInfoText}>
+                        {t('ledgerDetail.outstandingStatus')} {formatMoney(payment.previousOutstanding)} → {formatMoney(payment.newOutstanding)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Menu Modal */}
+        <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+          <Pressable style={styles.menuOverlay} onPress={() => setShowMenu(false)}>
+            <View style={styles.menuContainer}>
+              {canEditLedger && (
+                <TouchableOpacity style={styles.menuItem} onPress={openEditModal}>
+                  <MaterialIcons name="edit" size={20} color={Colors.light.text} />
+                  <Text style={styles.menuText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+              {canDeleteLedger && (
+                <TouchableOpacity style={styles.menuItem} onPress={openDeleteConfirm}>
+                  <MaterialIcons name="delete" size={20} color={Colors.light.error} />
+                  <Text style={[styles.menuText, styles.menuTextDelete]}>Delete</Text>
+                </TouchableOpacity>
+              )}
+              {!canEditLedger && !canDeleteLedger && (
+                <Text style={styles.noPermissionsText}>No actions available</Text>
+              )}
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* Other Modals */}
+        <ConfirmModal
+          visible={showDeleteConfirm}
+          title={t('ledgerDetail.deleteLedger')}
+          message={payments.length > 0 ? `This will delete the ledger and all ${payments.length} associated payment(s). This action cannot be undone.` : t('ledgerDetail.deleteConfirm')}
+          confirmText={t('common.delete')}
+          cancelText={t('common.cancel')}
+          destructive
+          onConfirm={() => { setShowDeleteConfirm(false); handleDeleteConfirm(); }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+        <SuccessModal
+          visible={showDeleteSuccess}
+          title={t('common.success')}
+          message={payments.length > 0 ? `Ledger deleted successfully along with ${payments.length} payment(s).` : t('ledgerDetail.ledgerDeleted')}
+          onOk={() => { setShowDeleteSuccess(false); router.back(); }}
+        />
+        <AlertModal visible={showAlert} variant={alertConfig.variant} title={alertConfig.title} message={alertConfig.message} onOk={() => setShowAlert(false)} />
+
+        {/* Edit Modal */}
+        <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
+          <View style={styles.editModalOverlay}>
+            <View style={[styles.editModalContainer, Shadow.lg, styles.editModalContainerDesktop]}>
+              <View style={styles.editModalHeader}>
+                <Text style={styles.editModalTitle}>{t('ledgerDetail.editLedger')}</Text>
+                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.light.text} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.editModalContent}>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('common.name')}</Text>
+                    <TextInput style={[styles.editInput, Shadow.sm]} value={editData.counterpartyName || ''} onChangeText={(text) => setEditData({ ...editData, counterpartyName: text })} placeholder={t('ledgerDetail.enterName')} placeholderTextColor={Colors.light.textMuted} />
+                  </View>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('ledgerDetail.priority')}</Text>
+                    <View style={styles.priorityRow}>
+                      {(['low', 'medium', 'high'] as const).map((p) => (
+                        <TouchableOpacity key={p} style={[styles.priorityBtn, editData.priority === p && styles.priorityBtnActive, editData.priority === p && p === 'high' && styles.priorityBtnHigh, editData.priority === p && p === 'medium' && styles.priorityBtnMedium, editData.priority === p && p === 'low' && styles.priorityBtnLow]} onPress={() => setEditData({ ...editData, priority: p })}>
+                          <Text style={[styles.priorityBtnText, editData.priority === p && styles.priorityBtnTextActive]}>{p === 'low' ? t('ledgerDetail.low') : p === 'medium' ? t('ledgerDetail.medium') : t('ledgerDetail.high')}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('common.notes')}</Text>
+                    <TextInput style={[styles.editTextArea, Shadow.sm]} value={editData.notes || ''} onChangeText={(text) => setEditData({ ...editData, notes: text })} placeholder={t('ledgerDetail.addNoteOptional')} placeholderTextColor={Colors.light.textMuted} multiline numberOfLines={4} textAlignVertical="top" />
+                  </View>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('common.tags')}</Text>
+                    <View style={styles.editTagsRow}>
+                      {(editData.tags || []).map((tag, index) => (
+                        <View key={index} style={styles.editTag}>
+                          <Text style={styles.editTagText}>{tag}</Text>
+                          <TouchableOpacity onPress={() => removeTag(index)}><MaterialIcons name="close" size={16} color={Colors.light.textSecondary} /></TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={styles.addTagRow}>
+                      <TextInput style={[styles.tagInput, Shadow.sm]} value={newTag} onChangeText={setNewTag} placeholder={t('ledgerDetail.addTag')} placeholderTextColor={Colors.light.textMuted} onSubmitEditing={addTag} />
+                      <TouchableOpacity style={styles.addTagBtn} onPress={addTag}><MaterialIcons name="add" size={20} color={Colors.light.textInverse} /></TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+              <View style={styles.editModalActions}>
+                <TouchableOpacity style={styles.editCancelBtn} onPress={() => setShowEditModal(false)}><Text style={styles.editCancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.editSaveBtn, Shadow.sm, editLoading && styles.editSaveBtnDisabled]} onPress={handleEdit} disabled={editLoading}>
+                  {editLoading ? <ActivityIndicator size="small" color={Colors.light.textInverse} /> : <Text style={styles.editSaveText}>{t('common.save')}</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add Debt Modal */}
+        <Modal visible={showAddDebtModal} transparent animationType="slide" onRequestClose={() => setShowAddDebtModal(false)}>
+          <KeyboardAvoidingView style={styles.editModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={[styles.editModalContainer, Shadow.lg, styles.editModalContainerDesktop]}>
+              <View style={styles.editModalHeader}>
+                <Text style={styles.editModalTitle}>{t('ledgerDetail.addMoreDebt')}</Text>
+                <TouchableOpacity onPress={() => setShowAddDebtModal(false)}><MaterialIcons name="close" size={24} color={Colors.light.text} /></TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={styles.editModalContent}>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('common.amount')}</Text>
+                    <TextInput style={[styles.editInput, Shadow.sm]} value={addDebtAmount} onChangeText={setAddDebtAmount} placeholder={t('ledgerDetail.enterAmount')} placeholderTextColor={Colors.light.textMuted} keyboardType="decimal-pad" />
+                  </View>
+                  <View style={styles.editInputGroup}>
+                    <Text style={styles.editLabel}>{t('modal.noteOptional')}</Text>
+                    <TextInput style={[styles.editTextArea, Shadow.sm]} value={addDebtNote} onChangeText={setAddDebtNote} placeholder={t('ledgerDetail.addNoteOptional')} placeholderTextColor={Colors.light.textMuted} multiline numberOfLines={3} textAlignVertical="top" />
+                  </View>
+                </View>
+              </ScrollView>
+              <View style={styles.editModalActions}>
+                <TouchableOpacity style={styles.editCancelBtn} onPress={() => setShowAddDebtModal(false)}><Text style={styles.editCancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.editSaveBtn, Shadow.sm, addDebtLoading && styles.editSaveBtnDisabled]} onPress={handleAddDebt} disabled={addDebtLoading}>
+                  {addDebtLoading ? <ActivityIndicator size="small" color={Colors.light.textInverse} /> : <Text style={styles.editSaveText}>{t('ledgerDetail.addDebt')}</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Payment Detail Modal */}
+        <Modal visible={showPaymentDetailModal} transparent animationType="slide" onRequestClose={() => setShowPaymentDetailModal(false)}>
+          <View style={styles.paymentDetailOverlay}>
+            <View style={[styles.paymentDetailContainer, Shadow.lg]}>
+              {paymentDetailLoading ? (
+                <View style={styles.paymentDetailLoading}><ActivityIndicator size="large" color={Colors.light.primaryMuted} /></View>
+              ) : selectedPayment ? (
+                <>
+                  <View style={styles.paymentDetailHeader}>
+                    <Text style={styles.paymentDetailTitle}>{t('ledgerDetail.paymentDetails')}</Text>
+                    <TouchableOpacity onPress={() => setShowPaymentDetailModal(false)}><MaterialIcons name="close" size={24} color={Colors.light.text} /></TouchableOpacity>
+                  </View>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View style={styles.paymentDetailContent}>
+                      <View style={styles.paymentDetailSection}>
+                        <Text style={styles.paymentDetailLabel}>{t('common.amount')}</Text>
+                        <Text style={[styles.paymentDetailAmount, selectedPayment.type === 'adjustment' && styles.paymentDetailAmountPositive]}>
+                          {selectedPayment.type === 'adjustment' ? '+' : '-'}{formatMoney(selectedPayment.amount)}
+                        </Text>
+                      </View>
+                      <View style={styles.paymentDetailRowWide}>
+                        <View style={styles.paymentDetailField}>
+                          <Text style={styles.paymentDetailLabel}>{t('common.type')}</Text>
+                          <View style={[styles.paymentDetailBadge, selectedPayment.type === 'payment' ? styles.paymentDetailBadgePayment : styles.paymentDetailBadgeAdjustment]}>
+                            <Text style={styles.paymentDetailBadgeText}>{selectedPayment.type.charAt(0).toUpperCase() + selectedPayment.type.slice(1)}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.paymentDetailField}>
+                          <Text style={styles.paymentDetailLabel}>{t('modal.method')}</Text>
+                          <Text style={styles.paymentDetailValue}>{selectedPayment.method.charAt(0).toUpperCase() + selectedPayment.method.slice(1)}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.paymentDetailSection}>
+                        <Text style={styles.paymentDetailLabel}>{t('ledgerDetail.date')}</Text>
+                        <Text style={styles.paymentDetailValue}>{new Date(selectedPayment.recordedAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text>
+                      </View>
+                      <View style={styles.paymentDetailSection}>
+                        <Text style={styles.paymentDetailLabel}>Recorded By</Text>
+                        <Text style={styles.paymentDetailValue}>{typeof selectedPayment.recordedBy === 'object' ? selectedPayment.recordedBy.name : 'Unknown'}{typeof selectedPayment.recordedBy === 'object' && selectedPayment.recordedBy.email && <Text style={styles.paymentDetailEmail}> ({selectedPayment.recordedBy.email})</Text>}</Text>
+                      </View>
+                      <View style={styles.paymentDetailSection}>
+                        <Text style={styles.paymentDetailLabel}>Balance Change</Text>
+                        <View style={styles.paymentDetailBalanceRow}><Text style={styles.paymentDetailBalanceLabel}>Previous:</Text><Text style={styles.paymentDetailBalanceValue}>{formatMoney(selectedPayment.previousOutstanding)}</Text></View>
+                        <View style={styles.paymentDetailBalanceRow}><Text style={styles.paymentDetailBalanceLabel}>New:</Text><Text style={styles.paymentDetailBalanceValue}>{formatMoney(selectedPayment.newOutstanding)}</Text></View>
+                      </View>
+                      {selectedPayment.note && (
+                        <View style={styles.paymentDetailSection}>
+                          <Text style={styles.paymentDetailLabel}>{t('common.notes')}</Text>
+                          <Text style={styles.paymentDetailValue}>{selectedPayment.note}</Text>
+                        </View>
+                      )}
+                      {selectedPayment.receiptUrl && (
+                        <View style={styles.paymentDetailSection}>
+                          <Text style={styles.paymentDetailLabel}>Receipt</Text>
+                          <TouchableOpacity style={styles.paymentDetailReceipt} activeOpacity={0.8} onPress={() => { if (selectedPayment.receiptUrl) { setReceiptImageUri(selectedPayment.receiptUrl); setShowReceiptModal(true); } }}>
+                            {receiptImageError ? (
+                              <View style={[styles.paymentDetailReceiptImage, styles.receiptErrorContainer]}><MaterialIcons name="broken-image" size={40} color={Colors.light.textMuted} /><Text style={styles.receiptErrorText}>Failed to load</Text></View>
+                            ) : (
+                              <><Image source={{ uri: selectedPayment.receiptUrl }} style={styles.paymentDetailReceiptImage} resizeMode="cover" onLoadStart={() => setReceiptImageLoading(true)} onLoadEnd={() => setReceiptImageLoading(false)} onError={() => { setReceiptImageLoading(false); setReceiptImageError(true); }} />{receiptImageLoading && <View style={styles.receiptLoadingOverlay}><ActivityIndicator size="small" color={Colors.light.primary} /></View>}</>
+                            )}
+                            <View style={styles.paymentDetailReceiptOverlay}><MaterialIcons name="zoom-in" size={24} color={Colors.light.textInverse} /><Text style={styles.paymentDetailReceiptText}>Tap to view</Text></View>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      <View style={styles.paymentDetailSection}><Text style={styles.paymentDetailLabel}>Payment ID</Text><Text style={styles.paymentDetailId}>{selectedPayment._id}</Text></View>
+                    </View>
+                  </ScrollView>
+                </>
+              ) : (
+                <View style={styles.paymentDetailError}><Text style={styles.errorText}>Payment not found</Text></View>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Receipt Modal */}
+        <Modal visible={showReceiptModal} transparent animationType="fade" onRequestClose={() => setShowReceiptModal(false)}>
+          <Pressable style={styles.receiptModalOverlay} onPress={() => setShowReceiptModal(false)}>
+            <View style={styles.receiptModalContainer}>
+              <TouchableOpacity style={styles.receiptModalClose} onPress={() => setShowReceiptModal(false)}><MaterialIcons name="close" size={24} color={Colors.light.textInverse} /></TouchableOpacity>
+              {receiptImageUri && <Image source={{ uri: receiptImageUri }} style={styles.receiptModalImage} resizeMode="contain" />}
+            </View>
+          </Pressable>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: containerPadding }]}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, (isDesktop || isTablet) && styles.headerDesktop]}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
           </TouchableOpacity>
@@ -359,15 +764,15 @@ export default function LedgerDetailScreen() {
         </Modal>
 
         {/* Ledger Summary Card */}
-        <View style={[styles.summaryCard, Shadow.md]}>
-          <View style={styles.summaryHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
+        <View style={[styles.summaryCard, Shadow.md, (isDesktop || isTablet) && styles.summaryCardDesktop]}>
+          <View style={[styles.summaryHeader, (isDesktop || isTablet) && styles.summaryHeaderDesktop]}>
+            <View style={[styles.avatar, (isDesktop || isTablet) && styles.avatarDesktop]}>
+              <Text style={[styles.avatarText, (isDesktop || isTablet) && styles.avatarTextDesktop]}>
                 {ledger.counterpartyName.split(' ').map(n => n[0]).join('').slice(0, 2)}
               </Text>
             </View>
             <View style={styles.summaryInfo}>
-              <Text style={styles.counterpartyName}>{ledger.counterpartyName}</Text>
+              <Text style={[styles.counterpartyName, (isDesktop || isTablet) && styles.counterpartyNameDesktop]}>{ledger.counterpartyName}</Text>
               <View style={[styles.typeBadge, ledger.type === 'owes_me' ? styles.typeBadgeOwes : styles.typeBadgeOwe]}>
                 <MaterialIcons
                   name={ledger.type === 'owes_me' ? 'arrow-upward' : 'arrow-downward'}
@@ -381,20 +786,20 @@ export default function LedgerDetailScreen() {
             </View>
           </View>
 
-<View style={styles.amountRow}>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>{t('ledgerDetail.initial')}</Text>
-              <Text style={styles.amountValue}>{formatMoney(computedInitialAmount)}</Text>
+          <View style={[styles.amountRow, (isDesktop || isTablet) && styles.amountRowDesktop]}>
+            <View style={[styles.amountItem, (isDesktop || isTablet) && styles.amountItemDesktop]}>
+              <Text style={[styles.amountLabel, (isDesktop || isTablet) && styles.amountLabelDesktop]}>{t('ledgerDetail.initial')}</Text>
+              <Text style={[styles.amountValue, (isDesktop || isTablet) && styles.amountValueDesktop]}>{formatMoney(computedInitialAmount)}</Text>
             </View>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>{t('ledgerDetail.outstanding')}</Text>
-              <Text style={[styles.amountValue, styles.outstandingAmount]}>
+            <View style={[styles.amountItem, (isDesktop || isTablet) && styles.amountItemDesktop]}>
+              <Text style={[styles.amountLabel, (isDesktop || isTablet) && styles.amountLabelDesktop]}>{t('ledgerDetail.outstanding')}</Text>
+              <Text style={[styles.amountValue, styles.outstandingAmount, (isDesktop || isTablet) && styles.amountValueDesktop]}>
                 {formatMoney(ledger.outstandingBalance)}
               </Text>
             </View>
-            <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>{t('ledgerDetail.dueDate')}</Text>
-              <Text style={styles.amountValue}>
+            <View style={[styles.amountItem, (isDesktop || isTablet) && styles.amountItemDesktop]}>
+              <Text style={[styles.amountLabel, (isDesktop || isTablet) && styles.amountLabelDesktop]}>{t('ledgerDetail.dueDate')}</Text>
+              <Text style={[styles.amountValue, (isDesktop || isTablet) && styles.amountValueDesktop]}>
                 {ledger.dueDate ? formatDate(ledger.dueDate) : t('ledgerDetail.na')}
               </Text>
             </View>
@@ -442,18 +847,18 @@ export default function LedgerDetailScreen() {
         {/* Record Payment Button */}
         {ledger.outstandingBalance > 0 && (
           <TouchableOpacity
-            style={[styles.recordPaymentBtn, Shadow.sm]}
+            style={[styles.recordPaymentBtn, Shadow.sm, (isDesktop || isTablet) && styles.recordPaymentBtnDesktop]}
             activeOpacity={0.8}
             onPress={() => router.push({ pathname: '/modal', params: { ledgerId: ledger._id, outstandingBalance: ledger.outstandingBalance } })}
           >
             <MaterialIcons name="add" size={20} color={Colors.light.textInverse} />
-            <Text style={styles.recordPaymentText}>{t('ledgerDetail.recordPayment')}</Text>
+            <Text style={[styles.recordPaymentText, (isDesktop || isTablet) && styles.recordPaymentTextDesktop]}>{t('ledgerDetail.recordPayment')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Add Debt Button */}
         <TouchableOpacity
-          style={[styles.addDebtBtn, Shadow.sm]}
+          style={[styles.addDebtBtn, Shadow.sm, (isDesktop || isTablet) && styles.addDebtBtnDesktop]}
           activeOpacity={0.8}
           onPress={() => setShowAddDebtModal(true)}
         >
@@ -462,8 +867,8 @@ export default function LedgerDetailScreen() {
         </TouchableOpacity>
 
 {/* Recent Payments */}
-        <View style={styles.paymentsSection}>
-          <Text style={styles.sectionTitle}>{t('ledgerDetail.paymentHistory')}</Text>
+        <View style={[styles.paymentsSection, (isDesktop || isTablet) && styles.paymentsSectionDesktop]}>
+          <Text style={[styles.sectionTitle, (isDesktop || isTablet) && styles.sectionTitleDesktop]}>{t('ledgerDetail.paymentHistory')}</Text>
 
           {payments.length === 0 ? (
             <View style={styles.emptyPayments}>
@@ -977,6 +1382,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  scrollContent: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  scrollContentDesktop: {
+    padding: 40,
+  },
+  desktopLayout: {
+    flexDirection: 'row',
+    gap: 40,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  actionButtonsColumn: {
+    gap: 16,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1004,6 +1429,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
+  },
+  headerDesktop: {
+    paddingHorizontal: 0,
+    paddingVertical: Spacing.xl,
   },
   headerTitle: {
     fontSize: FontSize.xl,
@@ -1052,24 +1481,36 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,
   },
+  summaryCardDesktop: {
+    padding: 32,
+    marginHorizontal: 0,
+    marginBottom: Spacing.xl,
+  },
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
     marginBottom: Spacing.xl,
   },
+  summaryHeaderDesktop: {
+    marginBottom: 28,
+  },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.light.primaryMuted + '25',
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  avatarDesktop: {
+    width: 72,
+    height: 72,
   },
   avatarText: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.light.primaryMuted,
+  },
+  avatarTextDesktop: {
+    fontSize: FontSize.xl,
   },
   summaryInfo: {
     flex: 1,
@@ -1079,6 +1520,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
     color: Colors.light.text,
+  },
+  counterpartyNameDesktop: {
+    fontSize: 28,
   },
   typeBadge: {
     flexDirection: 'row',
@@ -1112,18 +1556,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.light.border,
   },
+  amountRowDesktop: {
+    paddingTop: 28,
+  },
   amountItem: {
     alignItems: 'center',
+  },
+  amountItemDesktop: {
+    flex: 1,
   },
   amountLabel: {
     fontSize: FontSize.sm,
     color: Colors.light.textMuted,
     marginBottom: Spacing.xs,
   },
+  amountLabelDesktop: {
+    fontSize: FontSize.md,
+    marginBottom: Spacing.sm,
+  },
   amountValue: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
     color: Colors.light.text,
+  },
+  amountValueDesktop: {
+    fontSize: 24,
   },
   outstandingAmount: {
     color: Colors.light.accentOrange,
@@ -1202,10 +1659,18 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.xl,
   },
-recordPaymentText: {
+  recordPaymentBtnDesktop: {
+    paddingVertical: 16,
+    marginHorizontal: 0,
+    marginBottom: 28,
+  },
+  recordPaymentText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     color: Colors.light.textInverse,
+  },
+  recordPaymentTextDesktop: {
+    fontSize: FontSize.lg,
   },
   addDebtBtn: {
     flexDirection: 'row',
@@ -1218,6 +1683,11 @@ recordPaymentText: {
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.xl,
   },
+  addDebtBtnDesktop: {
+    paddingVertical: 16,
+    marginHorizontal: 0,
+    marginBottom: 28,
+  },
   addDebtText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
@@ -1227,11 +1697,18 @@ recordPaymentText: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.xxxl,
   },
+  paymentsSectionDesktop: {
+    paddingHorizontal: 0,
+  },
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.light.text,
     marginBottom: Spacing.md,
+  },
+  sectionTitleDesktop: {
+    fontSize: FontSize.xl,
+    marginBottom: 20,
   },
   emptyPayments: {
     alignItems: 'center',
@@ -1247,6 +1724,10 @@ recordPaymentText: {
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
+  },
+  paymentCardDesktop: {
+    padding: 24,
+    marginBottom: 16,
   },
   paymentHeader: {
     flexDirection: 'row',
@@ -1330,6 +1811,11 @@ paymentAmount: {
     borderTopLeftRadius: BorderRadius.xxl,
     borderTopRightRadius: BorderRadius.xxl,
     maxHeight: '80%',
+  },
+  editModalContainerDesktop: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    maxHeight: '90%',
   },
   editModalHeader: {
     flexDirection: 'row',

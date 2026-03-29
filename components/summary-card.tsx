@@ -1,7 +1,7 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 interface SummaryCardProps {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -22,6 +22,10 @@ export function SummaryCard({
     amountColor = Colors.light.text,
     onPress,
 }: SummaryCardProps) {
+    const { width } = useWindowDimensions();
+    const isDesktop = DeviceType.isDesktop(width);
+    const isTablet = DeviceType.isTablet(width);
+
     const content = (
         <>
             <View style={[styles.iconContainer, { backgroundColor: iconColor + '18' }]}>
@@ -32,10 +36,17 @@ export function SummaryCard({
         </>
     );
 
+    const cardStyle = [
+        styles.card,
+        { backgroundColor },
+        Shadow.md,
+        (isDesktop || isTablet) && styles.cardDesktop,
+    ];
+
     if (onPress) {
         return (
             <TouchableOpacity 
-                style={[styles.card, { backgroundColor }, Shadow.md]} 
+                style={cardStyle}
                 onPress={onPress}
                 activeOpacity={0.7}
             >
@@ -45,7 +56,7 @@ export function SummaryCard({
     }
 
     return (
-        <View style={[styles.card, { backgroundColor }, Shadow.md]}>
+        <View style={cardStyle}>
             {content}
         </View>
     );
@@ -57,6 +68,10 @@ const styles = StyleSheet.create({
         padding: Spacing.lg,
         borderRadius: BorderRadius.lg,
         gap: Spacing.sm,
+        minWidth: 0,
+    },
+    cardDesktop: {
+        padding: Spacing.xl,
     },
     iconContainer: {
         width: 40,

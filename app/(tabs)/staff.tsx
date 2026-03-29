@@ -1,6 +1,6 @@
 import { StaffCard } from '@/components/staff-card';
 import StaffAdminPanel from './StaffAdminPanel';
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import { getStaff, updateUserPermissions, updateUserStatus, User, UserPermissions } from '@/services/usersService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/src/contexts/LanguageContext';
@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,6 +38,8 @@ export default function StaffScreen() {
   const router = useRouter();
   const { user: currentUser, refreshUser } = useAuth();
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -153,9 +156,9 @@ export default function StaffScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
+      <View style={[styles.container, isDesktop && styles.containerDesktop]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
           </TouchableOpacity>
@@ -182,7 +185,7 @@ export default function StaffScreen() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {/* Intro */}
@@ -559,6 +562,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  containerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -602,6 +610,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
   },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
+  },
   headerTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
@@ -610,6 +621,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: 100,
+  },
+  scrollContentDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   intro: {
     marginBottom: Spacing.xl,

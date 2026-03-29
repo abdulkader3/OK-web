@@ -4,7 +4,7 @@ import { SummaryCard } from '@/components/summary-card';
 import { TransactionItem } from '@/components/transaction-item';
 import { MonthlyBalanceCard } from '@/components/MonthlyBalanceCard';
 import { FallbackImage } from '@/src/components/FallbackImage';
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import { getDashboardSummary, DashboardLedger } from '@/services/dashboardService';
 import { getQueueLength, flushQueue } from '@/services/syncService';
 import { getAllBigBosses, getBigBossSummary } from '@/src/services/bigBossService';
@@ -19,16 +19,19 @@ import { AlertModal } from '@/src/components/AlertModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, ToastAndroid } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, ToastAndroid, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { formatMoney } = useCurrency();
   const { isOffline } = useNetwork();
   const { getTodaySalesTotal, getSalesTotalForDays } = useSales();
+  const isDesktop = DeviceType.isDesktop(width);
+  const isTablet = DeviceType.isTablet(width);
   const [summary, setSummary] = useState<{
     totalOwedToMe: number;
     totalIOwe: number;
@@ -196,7 +199,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, (isDesktop || isTablet) && styles.headerDesktop]}>
           <View style={styles.headerLeft}>
             <FallbackImage
               uri={user?.profileImage?.url}
@@ -210,6 +213,17 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={styles.headerRight}>
+            {/* Desktop Action Button */}
+            {(isDesktop || isTablet) && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => router.push('/modal')}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="add" size={20} color={Colors.light.textInverse} />
+                <Text style={styles.addButtonText}>New Transaction</Text>
+              </TouchableOpacity>
+            )}
             {/* Sync Status Indicator */}
             {pendingCount > 0 && (
               <TouchableOpacity
@@ -249,61 +263,124 @@ export default function DashboardScreen() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, (isDesktop || isTablet) && styles.scrollContentDesktop]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {/* Summary Cards */}
-          <View style={styles.cardsGrid}>
-            <View style={styles.cardRow}>
-              <SummaryCard
-                icon="arrow-downward"
-                label={t('dashboard.owedToMe')}
-                amount={formatCurrency(summary?.totalOwedToMe || 0)}
-                backgroundColor={Colors.light.cardOwed}
-                iconColor={Colors.light.primaryMuted}
-                amountColor={Colors.light.primary}
-                onPress={() => router.push('/monthly-balance')}
-              />
-              <SummaryCard
-                icon="point-of-sale"
-                label={getSalesTotalForDays(2) > 0 ? t('sales.todaySales') : t('dashboard.dailySalesManagement')}
-                amount={formatCurrency(getTodaySalesTotal())}
-                backgroundColor={Colors.light.cardIOwe}
-                iconColor={Colors.light.accentOrange}
-                amountColor={Colors.light.primary}
-                onPress={() => router.push('/sales-management')}
-              />
+          {(isDesktop || isTablet) ? (
+            <View style={styles.dashboardContentDesktop}>
+              <View style={styles.cardsGridDesktop}>
+                <View style={styles.squareCardWrapper}>
+                  <SummaryCard
+                    icon="arrow-downward"
+                    label={t('dashboard.owedToMe')}
+                    amount={formatCurrency(summary?.totalOwedToMe || 0)}
+                    backgroundColor={Colors.light.cardOwed}
+                    iconColor={Colors.light.primaryMuted}
+                    amountColor={Colors.light.primary}
+                    onPress={() => router.push('/monthly-balance')}
+                  />
+                </View>
+                <View style={styles.squareCardWrapper}>
+                  <SummaryCard
+                    icon="point-of-sale"
+                    label={getSalesTotalForDays(2) > 0 ? t('sales.todaySales') : t('dashboard.dailySalesManagement')}
+                    amount={formatCurrency(getTodaySalesTotal())}
+                    backgroundColor={Colors.light.cardIOwe}
+                    iconColor={Colors.light.accentOrange}
+                    amountColor={Colors.light.primary}
+                    onPress={() => router.push('/sales-management')}
+                  />
+                </View>
+                <View style={styles.squareCardWrapper}>
+                  <SummaryCard
+                    icon="business"
+                    label={t('dashboard.bigBossManagement')}
+                    amount={formatCurrency(bigBossSummary?.totalPaid || 0)}
+                    backgroundColor={Colors.light.cardOverdue}
+                    iconColor={Colors.light.primary}
+                    amountColor={Colors.light.primary}
+                    onPress={() => router.push('/bigboss')}
+                  />
+                </View>
+                {user?.role === 'owner' && (
+                  <View style={styles.squareCardWrapper}>
+                    <SummaryCard
+                      icon="payments"
+                      label={t('salary.title')}
+                      amount={formatCurrency(salarySummary?.totalPaid || 0)}
+                      backgroundColor={Colors.light.cardPending}
+                      iconColor={Colors.light.accent}
+                      amountColor={Colors.light.accent}
+                      onPress={() => router.push('/salary')}
+                    />
+                  </View>
+                )}
+              </View>
+              <View style={styles.dashboardRightDesktop}>
+                {monthlyBalance && (
+                  <MonthlyBalanceCard
+                    data={monthlyBalance}
+                    onViewHistory={() => router.push('/monthly-balance')}
+                  />
+                )}
+              </View>
             </View>
-            <View style={styles.cardRow}>
-              <SummaryCard
-                icon="business"
-                label={t('dashboard.bigBossManagement')}
-                amount={formatCurrency(bigBossSummary?.totalPaid || 0)}
-                backgroundColor={Colors.light.cardOverdue}
-                iconColor={Colors.light.primary}
-                amountColor={Colors.light.primary}
-                onPress={() => router.push('/bigboss')}
-              />
-              {user?.role === 'owner' && (
+          ) : (
+            <View style={styles.cardsGrid}>
+              <View style={styles.cardRow}>
                 <SummaryCard
-                  icon="payments"
-                  label={t('salary.title')}
-                  amount={formatCurrency(salarySummary?.totalPaid || 0)}
-                  backgroundColor={Colors.light.cardPending}
-                  iconColor={Colors.light.accent}
-                  amountColor={Colors.light.accent}
-                  onPress={() => router.push('/salary')}
+                  icon="arrow-downward"
+                  label={t('dashboard.owedToMe')}
+                  amount={formatCurrency(summary?.totalOwedToMe || 0)}
+                  backgroundColor={Colors.light.cardOwed}
+                  iconColor={Colors.light.primaryMuted}
+                  amountColor={Colors.light.primary}
+                  onPress={() => router.push('/monthly-balance')}
                 />
-              )}
+                <SummaryCard
+                  icon="point-of-sale"
+                  label={getSalesTotalForDays(2) > 0 ? t('sales.todaySales') : t('dashboard.dailySalesManagement')}
+                  amount={formatCurrency(getTodaySalesTotal())}
+                  backgroundColor={Colors.light.cardIOwe}
+                  iconColor={Colors.light.accentOrange}
+                  amountColor={Colors.light.primary}
+                  onPress={() => router.push('/sales-management')}
+                />
+              </View>
+              <View style={styles.cardRow}>
+                <SummaryCard
+                  icon="business"
+                  label={t('dashboard.bigBossManagement')}
+                  amount={formatCurrency(bigBossSummary?.totalPaid || 0)}
+                  backgroundColor={Colors.light.cardOverdue}
+                  iconColor={Colors.light.primary}
+                  amountColor={Colors.light.primary}
+                  onPress={() => router.push('/bigboss')}
+                />
+                {user?.role === 'owner' && (
+                  <SummaryCard
+                    icon="payments"
+                    label={t('salary.title')}
+                    amount={formatCurrency(salarySummary?.totalPaid || 0)}
+                    backgroundColor={Colors.light.cardPending}
+                    iconColor={Colors.light.accent}
+                    amountColor={Colors.light.accent}
+                    onPress={() => router.push('/salary')}
+                  />
+                )}
+              </View>
             </View>
-          </View>
+          )}
 
-          {/* Monthly Balance Card */}
-          {monthlyBalance && (
-            <MonthlyBalanceCard
-              data={monthlyBalance}
-              onViewHistory={() => router.push('/monthly-balance')}
-            />
+          {/* Monthly Balance Card - Mobile/Tablet */}
+          {(isDesktop || isTablet) ? null : (
+            monthlyBalance && (
+              <MonthlyBalanceCard
+                data={monthlyBalance}
+                onViewHistory={() => router.push('/monthly-balance')}
+              />
+            )
           )}
 
           {/* Filter Pills */}
@@ -329,8 +406,8 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* FAB */}
-        <FABButton onPress={() => router.push('/modal')} />
+        {/* FAB - hide on desktop */}
+        {!(isDesktop || isTablet) && <FABButton onPress={() => router.push('/modal')} />}
 
         <AlertModal
           visible={showAlert}
@@ -364,6 +441,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
+  },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -443,13 +526,53 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.light.surface,
   },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    marginRight: Spacing.sm,
+  },
+  addButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.light.textInverse,
+  },
   scrollContent: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: 120,
   },
+  scrollContentDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: Spacing.xxxl,
+  },
   cardsGrid: {
     gap: Spacing.md,
     marginBottom: Spacing.md,
+  },
+  dashboardContentDesktop: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+  },
+  cardsGridDesktop: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    marginBottom: Spacing.lg,
+    flex: 65,
+    height: 140,
+  },
+  dashboardRightDesktop: {
+    flex: 35,
+  },
+  squareCardWrapper: {
+    flex: 1,
+    aspectRatio: 1,
+    minWidth: 0,
   },
   cardRow: {
     flexDirection: 'row',

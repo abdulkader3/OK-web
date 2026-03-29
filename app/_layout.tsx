@@ -2,8 +2,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
@@ -12,12 +12,19 @@ import { CurrencyProvider } from '@/src/contexts/CurrencyContext';
 import { SalesProvider } from '@/src/contexts/SalesContext';
 import { SyncProvider } from '@/src/contexts/SyncContext';
 import { GlobalSyncIndicator } from '@/src/components/GlobalSyncIndicator';
-import { Colors } from '@/constants/theme';
+import { ConfirmModal } from '@/src/components/ConfirmModal';
+import { Colors, DeviceType } from '@/constants/theme';
+import { Sidebar } from '@/components/Sidebar';
 
 function AuthNavigator() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const isAuthScreen = segments[0] === 'login' || segments[0] === 'register';
 
   useEffect(() => {
     if (isLoading) return;
@@ -39,7 +46,7 @@ function AuthNavigator() {
     );
   }
 
-  return (
+  const renderContent = () => (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
@@ -132,6 +139,45 @@ function AuthNavigator() {
         }}
       />
     </Stack>
+  );
+
+  const content = renderContent();
+
+  if (isDesktop && !isAuthScreen) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <Sidebar onLogout={() => setShowLogoutConfirm(true)} />
+        <View style={{ flex: 1 }}>{content}</View>
+        <ConfirmModal
+          visible={showLogoutConfirm}
+          title="Logout"
+          message="Are you sure you want to logout?"
+          confirmText="Logout"
+          onConfirm={() => {
+            setShowLogoutConfirm(false);
+            logout();
+          }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      {content}
+      <ConfirmModal
+        visible={showLogoutConfirm}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="Logout"
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout();
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+    </>
   );
 }
 

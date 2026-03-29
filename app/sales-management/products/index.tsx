@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Spacing, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useSales } from '@/src/contexts/SalesContext';
 import { EmptyState, ProductCard } from '@/src/components/sales';
@@ -6,12 +6,14 @@ import { ConfirmModal } from '@/src/components/ConfirmModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useState, useCallback } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, RefreshControl } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProductsListScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = DeviceType.isDesktop(width);
   const { products, deleteProduct, isLoading, isSyncing, syncAll } = useSales();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -63,8 +65,8 @@ export default function ProductsListScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, isDesktop && styles.containerDesktop]}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <TouchableOpacity 
             onPress={() => router.back()} 
             style={styles.backButton}
@@ -95,7 +97,7 @@ export default function ProductsListScreen() {
         </View>
 
         {products.length > 0 && (
-          <View style={styles.searchContainer}>
+          <View style={[styles.searchContainer, isDesktop && styles.searchContainerDesktop]}>
             <MaterialIcons name="search" size={20} color={Colors.light.textMuted} />
             <TextInput
               style={styles.searchInput}
@@ -117,7 +119,7 @@ export default function ProductsListScreen() {
           <FlatList
             data={filteredProducts}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
             renderItem={({ item }) => (
               <ProductCard
                 product={item}
@@ -167,6 +169,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  containerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -178,6 +185,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+  },
+  headerDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   backButton: {
     padding: Spacing.xs,
@@ -205,6 +215,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
+  searchContainerDesktop: {
+    marginHorizontal: Spacing.xxxl,
+  },
   searchInput: {
     flex: 1,
     paddingVertical: Spacing.md,
@@ -214,6 +227,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: Spacing.lg,
+  },
+  listContentDesktop: {
+    paddingHorizontal: Spacing.xxxl,
   },
   separator: {
     height: Spacing.md,

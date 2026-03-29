@@ -1,4 +1,4 @@
-import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/constants/theme';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing, DeviceType } from '@/constants/theme';
 import { Contact, contactsApi, ContactBalance } from '@/src/services/contacts';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
@@ -6,13 +6,15 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import React, { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertModal } from '@/src/components/AlertModal';
 
 export default function ContactsScreen() {
     const router = useRouter();
     const { t } = useLanguage();
+    const { width } = useWindowDimensions();
+    const isDesktop = DeviceType.isDesktop(width);
     const { formatMoney } = useCurrency();
     
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -160,9 +162,9 @@ export default function ContactsScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
-            <View style={styles.container}>
+            <View style={[styles.container, isDesktop && styles.containerDesktop]}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, isDesktop && styles.headerDesktop]}>
                     <Text style={styles.headerTitle}>{t('contacts.title')}</Text>
                     <TouchableOpacity 
                         activeOpacity={0.7}
@@ -173,7 +175,7 @@ export default function ContactsScreen() {
                 </View>
 
                 {/* Search */}
-                <View style={styles.searchContainer}>
+                <View style={[styles.searchContainer, isDesktop && styles.searchContainerDesktop]}>
                     <MaterialIcons name="search" size={20} color={Colors.light.textMuted} />
                     <TextInput
                         style={styles.searchInput}
@@ -204,7 +206,7 @@ export default function ContactsScreen() {
                     data={contacts}
                     renderItem={renderContact}
                     keyExtractor={(item) => item._id}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl
@@ -516,6 +518,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.light.background,
     },
+    containerDesktop: {
+        maxWidth: 1200,
+        alignSelf: 'center',
+        width: '100%',
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -527,6 +534,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.xl,
         paddingVertical: Spacing.lg,
+    },
+    headerDesktop: {
+        paddingHorizontal: Spacing.xxxl,
     },
     headerTitle: {
         fontSize: FontSize.xxl,
@@ -543,6 +553,9 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.md,
         borderWidth: 1,
         borderColor: Colors.light.border,
+    },
+    searchContainerDesktop: {
+        marginHorizontal: Spacing.xxxl,
     },
     searchInput: {
         flex: 1,
@@ -573,6 +586,9 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: Spacing.xl,
         paddingBottom: 100,
+    },
+    listContentDesktop: {
+        paddingHorizontal: Spacing.xxxl,
     },
     contactCard: {
         backgroundColor: Colors.light.surface,
