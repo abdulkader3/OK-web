@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -19,14 +19,8 @@ import { AlertModal } from '@/src/components/AlertModal';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      router.replace('/(tabs)');
-    }
-  }, [user]);
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +28,7 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{ variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }>({ variant: 'info', title: '', message: '' });
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -62,6 +57,7 @@ export default function LoginScreen() {
 
     try {
       await login(email.trim().toLowerCase(), password);
+      setLoginSuccess(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setAlertConfig({ variant: 'error', title: 'Error', message });
@@ -69,6 +65,11 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSuccessOk = () => {
+    setLoginSuccess(false);
+    router.replace('/(tabs)' as any);
   };
 
   return (
@@ -172,6 +173,18 @@ export default function LoginScreen() {
         message={alertConfig.message}
         onOk={() => setShowAlert(false)}
       />
+
+      {loginSuccess && (
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <MaterialIcons name="check-circle" size={64} color={Colors.light.accent} />
+            <Text style={styles.successTitle}>Successfully logged in</Text>
+            <TouchableOpacity style={styles.successButton} onPress={handleSuccessOk}>
+              <Text style={styles.successButtonText}>Okay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -294,5 +307,42 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     color: Colors.light.primary,
+  },
+  successOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  successCard: {
+    backgroundColor: Colors.light.background,
+    borderRadius: BorderRadius.xxl,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 300,
+  },
+  successTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.light.text,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
+    textAlign: 'center',
+  },
+  successButton: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxxl,
+    width: '100%',
+    alignItems: 'center',
+  },
+  successButtonText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.light.textInverse,
   },
 });

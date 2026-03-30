@@ -25,17 +25,13 @@ function AuthNavigator() {
   const isDesktop = DeviceType.isDesktop(width);
   const { showLogoutConfirm, setShowLogoutConfirm } = useLogoutModal();
 
-  const isAuthScreen = segments[0] === 'login' || segments[0] === 'register';
-
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !router || !segments || !segments.length) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
     
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
     }
   }, [isAuthenticated, isLoading, segments, router]);
 
@@ -151,6 +147,8 @@ function AuthNavigator() {
   const handleLogout = () => {
     setShowLogoutConfirm(true);
   };
+
+  const isAuthScreen = segments?.[0] === 'login' || segments?.[0] === 'register';
 
   if (isDesktop && !isAuthScreen) {
     return (
