@@ -69,7 +69,7 @@ export default function LoginScreen() {
 
   const handleSuccessOk = () => {
     setLoginSuccess(false);
-    router.replace('/(tabs)' as any);
+    router.replace('/' as any);
   };
 
   return (
