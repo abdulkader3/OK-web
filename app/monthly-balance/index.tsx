@@ -1,12 +1,18 @@
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, DeviceType } from '@/constants/theme';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
+import { useCachedData } from '@/src/hooks/useCachedData';
 import { getMonthlyHistory, getMonthlySummary, MonthlyHistoryItem, MonthlyBalanceData } from '@/src/services/monthlyBalanceService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface MonthlyBalanceCacheData {
+  history: MonthlyHistoryItem[];
+  currentMonth: MonthlyBalanceData | null;
+}
 
 const MONTH_NAMES_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -24,10 +30,6 @@ export default function MonthlyBalanceHistoryScreen() {
   const { formatMoney } = useCurrency();
   const { width } = useWindowDimensions();
   const isDesktop = DeviceType.isDesktop(width);
-  const [history, setHistory] = useState<MonthlyHistoryItem[]>([]);
-  const [currentMonth, setCurrentMonth] = useState<MonthlyBalanceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const monthNames = language === 'bn' ? MONTH_NAMES_BN : MONTH_NAMES_EN;
 
@@ -36,31 +38,30 @@ export default function MonthlyBalanceHistoryScreen() {
     return formatMoney(num);
   };
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [historyData, summaryData] = await Promise.all([
-        getMonthlyHistory(12),
-        getMonthlySummary(),
-      ]);
-      
-      setHistory(historyData);
-      setCurrentMonth(summaryData);
-    } catch (error) {
-      console.error('Failed to fetch monthly balance history:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const fetchMonthlyData = useCallback(async (): Promise<MonthlyBalanceCacheData> => {
+    const [historyData, summaryData] = await Promise.all([
+      getMonthlyHistory(12),
+      getMonthlySummary(),
+    ]);
+    
+    return {
+      history: historyData,
+      currentMonth: summaryData,
+    };
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: cacheData, loading, refreshing, refresh } = useCachedData<MonthlyBalanceCacheData>({
+    storageKey: '@monthly_balance_data',
+    fetchFromApi: fetchMonthlyData,
+    initialValue: { history: [], currentMonth: null },
+  });
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
+  const history = cacheData?.history || [];
+  const currentMonth = cacheData?.currentMonth || null;
+
+  const onRefresh = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
   const renderMonthItem = (item: MonthlyHistoryItem, isCurrentMonth: boolean) => {
     const monthName = monthNames[item.month - 1] || '';
@@ -154,7 +155,18 @@ export default function MonthlyBalanceHistoryScreen() {
             <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('monthlyHistory.title')}</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity 
+            style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+            onPress={onRefresh}
+            disabled={refreshing}
+            activeOpacity={0.7}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={Colors.light.primary} />
+            ) : (
+              <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+            )}
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -204,6 +216,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
+  },
+  syncBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.light.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncBadgeActive: {
+    backgroundColor: Colors.light.primary + '25',
   },
   headerDesktop: {
     paddingHorizontal: Spacing.xxxl,

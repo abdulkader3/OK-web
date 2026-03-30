@@ -2,6 +2,7 @@ import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '@/c
 import { getAllBigBosses, BigBossListItem } from '@/src/services/bigBossService';
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
+import { useCachedData } from '@/src/hooks/useCachedData';
 import { AlertModal } from '@/src/components/AlertModal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
@@ -14,10 +15,7 @@ export default function BigBossListScreen() {
     const { t } = useLanguage();
     const { formatMoney } = useCurrency();
     
-    const [bigBosses, setBigBosses] = useState<BigBossListItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
     const [newName, setNewName] = useState('');
@@ -25,28 +23,20 @@ export default function BigBossListScreen() {
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{ variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }>({ variant: 'info', title: '', message: '' });
 
-    const fetchBigBosses = useCallback(async () => {
-        try {
-            setError(null);
-            const data = await getAllBigBosses();
-            setBigBosses(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load Big Bosses');
-            console.error('Error fetching Big Bosses:', err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+    const fetchBigBossesData = useCallback(async (): Promise<BigBossListItem[]> => {
+        const data = await getAllBigBosses();
+        return data;
     }, []);
 
-    useEffect(() => {
-        fetchBigBosses();
-    }, [fetchBigBosses]);
+    const { data: bigBosses, refreshing, error, refresh } = useCachedData<BigBossListItem[]>({
+        storageKey: '@bigboss_data',
+        fetchFromApi: fetchBigBossesData,
+        initialValue: [],
+    });
 
     const onRefresh = useCallback(() => {
-        setRefreshing(true);
-        fetchBigBosses();
-    }, [fetchBigBosses]);
+        refresh();
+    }, [refresh]);
 
     const handleBigBossPress = (bigBoss: BigBossListItem) => {
         router.push({ pathname: '/bigboss/[id]', params: { id: bigBoss._id } });
@@ -71,7 +61,7 @@ export default function BigBossListScreen() {
                 setShowCreateModal(false);
                 setNewName('');
                 setNewDescription('');
-                fetchBigBosses();
+                refresh();
             } else {
                 setAlertConfig({ variant: 'error', title: 'Error', message: 'Failed to create Big Boss' });
                 setShowAlert(true);
@@ -149,6 +139,18 @@ export default function BigBossListScreen() {
             <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
+                    <TouchableOpacity 
+                        style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+                        onPress={onRefresh}
+                        disabled={refreshing}
+                        activeOpacity={0.7}
+                    >
+                        {refreshing ? (
+                            <ActivityIndicator size="small" color={Colors.light.primary} />
+                        ) : (
+                            <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+                        )}
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('bigboss.title')}</Text>
                     <TouchableOpacity 
                         onPress={() => router.push('/bigboss/bills')}
@@ -264,6 +266,17 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: Colors.light.background,
+    },
+    syncBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Colors.light.primary + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    syncBadgeActive: {
+        backgroundColor: Colors.light.primary + '25',
     },
     header: {
         flexDirection: 'row',

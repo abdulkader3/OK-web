@@ -64,13 +64,7 @@ export default function StaffScreen() {
   const canManageStaff = currentUser?.permissions?.canManageStaff ?? false;
   const isOwner = currentUser?.role === 'owner';
   const isAdmin = currentUser?.role === 'admin';
-  const isStaff = currentUser?.role === 'staff';
-
-  useEffect(() => {
-    // No redirect needed - we show permission denied UI below
-  }, []);
-
-  // Staff view is handled inside the main render via StaffAdminPanel to avoid hook-order issues
+  const isStaffRole = currentUser?.role === 'staff';
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -88,10 +82,10 @@ export default function StaffScreen() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchUsers();
-  };
+  }, [fetchUsers]);
 
   const handleManagePermissions = (user: User) => {
     if (!canManageStaff && !isOwner) {
@@ -116,7 +110,7 @@ export default function StaffScreen() {
         await updateUserStatus(selectedUser._id, tempActive);
       }
       
-      await fetchUsers();
+      await onRefresh();
       await refreshUser();
       setPermissionModalVisible(false);
       setAlertConfig({ variant: 'success', title: 'Success', message: 'User updated successfully' });
@@ -131,7 +125,7 @@ export default function StaffScreen() {
 
   const companyFilter = currentUser?.company || '';
   
-  const filteredUsers = users.filter(u => u.company === companyFilter);
+  const filteredUsers = (users || []).filter(u => u.company === companyFilter);
 
   const getPermissionLabels = (permissions: UserPermissions): string[] => {
     const labels: string[] = [];
@@ -166,13 +160,25 @@ export default function StaffScreen() {
           {(canManageStaff || isOwner) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity 
+                style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+                onPress={onRefresh}
+                disabled={refreshing}
+                activeOpacity={0.7}
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color={Colors.light.primary} />
+                ) : (
+                  <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
                 activeOpacity={0.7}
                 onPress={() => router.push('/salary/pay')}
-                style={{ marginRight: Spacing.md }}
+                style={{ marginLeft: Spacing.md }}
               >
                 <MaterialIcons name="payments" size={24} color={Colors.light.primary} />
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity activeOpacity={0.7} style={{ marginLeft: Spacing.md }}>
                 <MaterialIcons name="settings" size={24} color={Colors.light.text} />
               </TouchableOpacity>
             </View>
@@ -181,7 +187,7 @@ export default function StaffScreen() {
           )}
         </View>
 
-        {isStaff && <StaffAdminPanel />}
+        {isStaffRole && <StaffAdminPanel />}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -519,7 +525,7 @@ export default function StaffScreen() {
                         setNewStaff({ name: '', email: '', password: '', phone: '', role: 'staff' });
                         setAddStaffModalVisible(false);
                         await refreshUser();
-                        fetchUsers();
+                        onRefresh();
                       }
                     } catch (err) {
                       setAlertConfig({ variant: 'error', title: t('common.error'), message: err instanceof Error ? err.message : 'Failed to add staff member' });
@@ -602,6 +608,17 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     color: Colors.light.textInverse,
+  },
+  syncBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.light.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncBadgeActive: {
+    backgroundColor: Colors.light.primary + '25',
   },
   header: {
     flexDirection: 'row',

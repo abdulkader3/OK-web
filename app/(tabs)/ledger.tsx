@@ -35,6 +35,37 @@ export default function LedgerScreen() {
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{ variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }>({ variant: 'info', title: '', message: '' });
 
+    const fetchLedgers = useCallback(async () => {
+        try {
+            setError(null);
+            const filters: Record<string, string> = {};
+            
+            if (activeFilter === 'Lent') filters.type = 'owes_me';
+            if (activeFilter === 'Borrowed') filters.type = 'i_owe';
+            if (searchText) filters.search = searchText;
+            if (dateFrom) filters.dueDateFrom = dateFrom;
+            if (dateTo) filters.dueDateTo = dateTo;
+            
+            const response = await getLedgers(filters as any);
+            setLedgers(response.ledgers || []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load ledgers');
+            console.error('Error fetching ledgers:', err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [activeFilter, searchText, dateFrom, dateTo]);
+
+    useEffect(() => {
+        fetchLedgers();
+    }, [fetchLedgers]);
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchLedgers();
+    }, [fetchLedgers]);
+
     const handleExportPDF = useCallback(async () => {
         try {
             setExporting(true);
@@ -103,37 +134,6 @@ export default function LedgerScreen() {
         }
     }, [t]);
 
-    const fetchLedgers = useCallback(async () => {
-        try {
-            setError(null);
-            const filters: Record<string, string> = {};
-            
-            if (activeFilter === 'Lent') filters.type = 'owes_me';
-            if (activeFilter === 'Borrowed') filters.type = 'i_owe';
-            if (searchText) filters.search = searchText;
-            if (dateFrom) filters.dueDateFrom = dateFrom;
-            if (dateTo) filters.dueDateTo = dateTo;
-            
-            const response = await getLedgers(filters as any);
-            setLedgers(response.ledgers || []);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load ledgers');
-            console.error('Error fetching ledgers:', err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, [activeFilter, searchText, dateFrom, dateTo]);
-
-    useEffect(() => {
-        fetchLedgers();
-    }, [fetchLedgers]);
-
-    const onRefresh = useCallback(() => {
-        setRefreshing(true);
-        fetchLedgers();
-    }, [fetchLedgers]);
-
     const getStatusInfo = (ledger: Ledger) => {
         const now = new Date();
         const dueDate = ledger.dueDate ? new Date(ledger.dueDate) : null;
@@ -182,7 +182,18 @@ export default function LedgerScreen() {
             <View style={[styles.container, isDesktop && styles.containerDesktop]}>
                 {/* Header */}
                 <View style={[styles.header, isDesktop && styles.headerDesktop]}>
-                    <View style={{ width: 24 }} />
+                    <TouchableOpacity 
+                        style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+                        onPress={onRefresh}
+                        disabled={refreshing}
+                        activeOpacity={0.7}
+                    >
+                        {refreshing ? (
+                            <ActivityIndicator size="small" color={Colors.light.primary} />
+                        ) : (
+                            <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+                        )}
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('ledger.title')}</Text>
                     <TouchableOpacity 
                         style={[styles.exportBtn, exporting && styles.exportBtnDisabled]} 
@@ -261,7 +272,7 @@ export default function LedgerScreen() {
                     {error && (
                         <View style={styles.errorContainer}>
                             <Text style={styles.errorText}>{error}</Text>
-                            <TouchableOpacity onPress={fetchLedgers}>
+                            <TouchableOpacity onPress={onRefresh}>
                                 <Text style={styles.retryText}>{t('ledger.tapToRetry')}</Text>
                             </TouchableOpacity>
                         </View>
@@ -280,10 +291,10 @@ export default function LedgerScreen() {
                     )}
 
                     {/* Debt Entries */}
-                    {!loading && !error && ledgers.map(renderLedger)}
+                    {!loading && !error && ledgers && ledgers.map(renderLedger)}
 
                     {/* Empty State */}
-                    {!loading && !error && ledgers.length === 0 && (
+                    {!loading && !error && ledgers && ledgers.length === 0 && (
                         <View style={styles.emptyContainer}>
                             <MaterialIcons name="inbox" size={48} color={Colors.light.textMuted} />
                             <Text style={styles.emptyText}>{t('ledger.noLedgersFound')}</Text>
@@ -396,6 +407,17 @@ const styles = StyleSheet.create({
         fontSize: FontSize.xl,
         fontWeight: FontWeight.bold,
         color: Colors.light.text,
+    },
+    syncBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Colors.light.primary + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    syncBadgeActive: {
+        backgroundColor: Colors.light.primary + '25',
     },
     exportBtn: {
         flexDirection: 'row',

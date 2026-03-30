@@ -1,12 +1,39 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGlobalSync } from '@/src/contexts/SyncContext';
+import { useSales } from '@/src/contexts/SalesContext';
 import { Colors, FontSize, FontWeight, Spacing } from '@/constants/theme';
 
 export function GlobalSyncIndicator() {
-  const { isSyncing, pendingCount } = useGlobalSync();
+  const { isSyncing, pendingCount, triggerSync } = useGlobalSync();
+  const { syncAll } = useSales();
   const insets = useSafeAreaInsets();
+
+  const handlePress = () => {
+    if (!isSyncing) {
+      syncAll();
+    }
+  };
+
+  if (pendingCount > 0 && !isSyncing) {
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.container, 
+          { top: insets.top }
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.content, styles.pendingContent]}>
+          <Text style={styles.pendingText}>
+            Tap to sync {pendingCount} pending
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
 
   if (!isSyncing) {
     return null;
@@ -17,8 +44,7 @@ export function GlobalSyncIndicator() {
       style={[
         styles.container, 
         { top: insets.top }
-      ]} 
-      pointerEvents="none"
+      ]}
     >
       <View style={styles.content}>
         <ActivityIndicator size="small" color={Colors.light.textInverse} />
@@ -52,9 +78,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  pendingContent: {
+    backgroundColor: Colors.light.warning,
+  },
   text: {
     color: Colors.light.textInverse,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
+  },
+  pendingText: {
+    color: Colors.light.textInverse,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
   },
 });

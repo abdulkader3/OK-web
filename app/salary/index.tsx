@@ -3,6 +3,7 @@ import { getAllSalaryPayments, SalaryPaymentsResponse, SalaryPayment } from '@/s
 import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCachedData } from '@/src/hooks/useCachedData';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,11 +15,6 @@ export default function AllSalaryPaymentsScreen() {
     const { user } = useAuth();
     const { t } = useLanguage();
     const { formatMoney } = useCurrency();
-    
-    const [paymentsResponse, setPaymentsResponse] = useState<SalaryPaymentsResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         // Only owners can view all salary payments
@@ -28,32 +24,23 @@ export default function AllSalaryPaymentsScreen() {
         }
     }, [user?.role]);
 
-    const fetchPayments = useCallback(async () => {
+    const fetchPaymentsData = useCallback(async (): Promise<SalaryPaymentsResponse | null> => {
         if (user?.role !== 'owner') {
-            setLoading(false);
-            return;
+            return null;
         }
-        try {
-            setError(null);
-            const data = await getAllSalaryPayments();
-            setPaymentsResponse(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load payments');
-            console.error('Error fetching payments:', err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+        const data = await getAllSalaryPayments();
+        return data;
     }, [user?.role]);
 
-    useEffect(() => {
-        fetchPayments();
-    }, [fetchPayments]);
+    const { data: paymentsResponse, loading, refreshing, error, refresh } = useCachedData<SalaryPaymentsResponse | null>({
+        storageKey: '@salary_data',
+        fetchFromApi: fetchPaymentsData,
+        initialValue: null,
+    });
 
     const onRefresh = useCallback(() => {
-        setRefreshing(true);
-        fetchPayments();
-    }, [fetchPayments]);
+        refresh();
+    }, [refresh]);
 
     const formatCurrency = (amount: number) => {
         return formatMoney(amount);
@@ -161,7 +148,18 @@ export default function AllSalaryPaymentsScreen() {
                         <MaterialIcons name="arrow-back" size={24} color={Colors.light.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('salary.allPayments')}</Text>
-                    <View style={styles.placeholder} />
+                    <TouchableOpacity 
+                        style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+                        onPress={onRefresh}
+                        disabled={refreshing}
+                        activeOpacity={0.7}
+                    >
+                        {refreshing ? (
+                            <ActivityIndicator size="small" color={Colors.light.primary} />
+                        ) : (
+                            <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 <FlatList
@@ -206,6 +204,17 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.light.surface,
         borderBottomWidth: 1,
         borderBottomColor: Colors.light.border,
+    },
+    syncBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Colors.light.primary + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    syncBadgeActive: {
+        backgroundColor: Colors.light.primary + '25',
     },
     backButton: {
         padding: Spacing.xs,

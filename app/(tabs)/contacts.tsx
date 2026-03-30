@@ -165,6 +165,18 @@ export default function ContactsScreen() {
             <View style={[styles.container, isDesktop && styles.containerDesktop]}>
                 {/* Header */}
                 <View style={[styles.header, isDesktop && styles.headerDesktop]}>
+                    <TouchableOpacity 
+                        style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+                        onPress={onRefresh}
+                        disabled={refreshing}
+                        activeOpacity={0.7}
+                    >
+                        {refreshing ? (
+                            <ActivityIndicator size="small" color={Colors.light.primary} />
+                        ) : (
+                            <MaterialIcons name="refresh" size={20} color={Colors.light.primary} />
+                        )}
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('contacts.title')}</Text>
                     <TouchableOpacity 
                         activeOpacity={0.7}
@@ -195,7 +207,7 @@ export default function ContactsScreen() {
                 {error && (
                     <View style={styles.errorContainer}>
                         <Text style={styles.errorText}>{error}</Text>
-                        <TouchableOpacity onPress={fetchContacts}>
+                        <TouchableOpacity onPress={onRefresh}>
                             <Text style={styles.retryText}>{t('common.retry')}</Text>
                         </TouchableOpacity>
                     </View>
@@ -203,7 +215,7 @@ export default function ContactsScreen() {
 
                 {/* Contacts List */}
                 <FlatList
-                    data={contacts}
+                    data={contacts || []}
                     renderItem={renderContact}
                     keyExtractor={(item) => item._id}
                     contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
@@ -527,6 +539,17 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    syncBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Colors.light.primary + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    syncBadgeActive: {
+        backgroundColor: Colors.light.primary + '25',
     },
     header: {
         flexDirection: 'row',

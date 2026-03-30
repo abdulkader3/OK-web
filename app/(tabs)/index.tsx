@@ -16,11 +16,32 @@ import { useLanguage } from '@/src/contexts/LanguageContext';
 import { useCurrency } from '@/src/contexts/CurrencyContext';
 import { useSales } from '@/src/contexts/SalesContext';
 import { AlertModal } from '@/src/components/AlertModal';
+import { useCachedData } from '@/src/hooks/useCachedData';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, ToastAndroid, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface DashboardCacheData {
+  summary: {
+    totalOwedToMe: number;
+    totalIOwe: number;
+    overdueCount: number;
+    highPriorityCount: number;
+    recentLedgers: DashboardLedger[];
+    dueLedgers: DashboardLedger[];
+  } | null;
+  bigBossSummary: {
+    totalBigBosses: number;
+    totalPaid: number;
+  } | null;
+  monthlyBalance: MonthlyBalanceData | null;
+  salarySummary: {
+    totalPaid: number;
+    totalPayments: number;
+  } | null;
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -32,30 +53,60 @@ export default function DashboardScreen() {
   const { getTodaySalesTotal, getSalesTotalForDays } = useSales();
   const isDesktop = DeviceType.isDesktop(width);
   const isTablet = DeviceType.isTablet(width);
-  const [summary, setSummary] = useState<{
-    totalOwedToMe: number;
-    totalIOwe: number;
-    overdueCount: number;
-    highPriorityCount: number;
-    recentLedgers: DashboardLedger[];
-    dueLedgers: DashboardLedger[];
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [bigBossSummary, setBigBossSummary] = useState<{
-    totalBigBosses: number;
-    totalPaid: number;
-  } | null>(null);
-  const [salarySummary, setSalarySummary] = useState<{
-    totalPaid: number;
-    totalPayments: number;
-  } | null>(null);
-  const [monthlyBalance, setMonthlyBalance] = useState<MonthlyBalanceData | null>(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{ variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }>({ variant: 'info', title: '', message: '' });
+
+  const fetchDashboardData = useCallback(async (): Promise<DashboardCacheData> => {
+    const [data, bigBossSummaryData, monthlyBalanceData] = await Promise.all([
+      getDashboardSummary(),
+      getBigBossSummary(),
+      getMonthlySummary(),
+    ]);
+
+    let salaryData: { totalPaid: number; totalPayments: number } | null = null;
+    if (user?.role === 'owner') {
+      try {
+        const salarySummaryData = await getSalarySummary();
+        if (salarySummaryData) {
+          salaryData = {
+            totalPaid: salarySummaryData.totalPaid,
+            totalPayments: salarySummaryData.totalPayments,
+          };
+        }
+      } catch (salaryError) {
+        console.log('Salary summary not available for non-owners');
+      }
+    }
+
+    return {
+      summary: data,
+      bigBossSummary: bigBossSummaryData ? {
+        totalBigBosses: bigBossSummaryData.totalBigBosses,
+        totalPaid: bigBossSummaryData.totalPaid,
+      } : null,
+      monthlyBalance: monthlyBalanceData || null,
+      salarySummary: salaryData,
+    };
+  }, [user?.role]);
+
+  const { data: cacheData, loading, refreshing, refresh } = useCachedData<DashboardCacheData>({
+    storageKey: '@dashboard_data',
+    fetchFromApi: fetchDashboardData,
+    initialValue: {
+      summary: null,
+      bigBossSummary: null,
+      monthlyBalance: null,
+      salarySummary: null,
+    },
+  });
+
+  const summary = cacheData?.summary || null;
+  const bigBossSummary = cacheData?.bigBossSummary || null;
+  const salarySummary = cacheData?.salarySummary || null;
+  const monthlyBalance = cacheData?.monthlyBalance || null;
 
   useEffect(() => {
     setIsOnline(!isOffline);
@@ -99,66 +150,11 @@ export default function DashboardScreen() {
     checkPending();
   }, []);
 
-  const fetchSummary = useCallback(async () => {
-    // Don't fetch if not authenticated
-    if (!isAuthenticated) return;
-    
-    try {
-      const [data, bigBossSummaryData, monthlyBalanceData] = await Promise.all([
-        getDashboardSummary(),
-        getBigBossSummary(),
-        getMonthlySummary(),
-      ]);
-      
-      setSummary(data);
-      
-      if (bigBossSummaryData) {
-        setBigBossSummary({
-          totalBigBosses: bigBossSummaryData.totalBigBosses,
-          totalPaid: bigBossSummaryData.totalPaid,
-        });
-      }
-      
-      if (monthlyBalanceData) {
-        setMonthlyBalance(monthlyBalanceData);
-      }
-      
-      // Only fetch salary data if user is owner
-      if (user?.role === 'owner') {
-        try {
-          const salarySummaryData = await getSalarySummary();
-          if (salarySummaryData) {
-            setSalarySummary({
-              totalPaid: salarySummaryData.totalPaid,
-              totalPayments: salarySummaryData.totalPayments,
-            });
-          }
-        } catch (salaryError) {
-          // Silently handle salary errors for non-owners
-          console.log('Salary summary not available for non-owners');
-        }
-      }
-      
-      setPendingCount(getQueueLength());
-    } catch (error) {
-      // Silently handle auth errors - will redirect to login
-      console.log('Dashboard fetch skipped - not authenticated');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const onRefresh = useCallback(() => {
+    if (isAuthenticated) {
+      refresh();
     }
-  }, [isAuthenticated, user?.role]);
-
-  useEffect(() => {
-    if (!authLoading) {
-      fetchSummary();
-    }
-  }, [fetchSummary, authLoading]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchSummary();
-  };
+  }, [refresh, isAuthenticated]);
 
   const formatCurrency = (amount: number) => {
     return formatMoney(amount);
@@ -224,6 +220,19 @@ export default function DashboardScreen() {
                 <Text style={styles.addButtonText}>New Transaction</Text>
               </TouchableOpacity>
             )}
+            {/* Refresh Button */}
+            <TouchableOpacity
+              style={[styles.syncBadge, refreshing && styles.syncBadgeActive]}
+              onPress={onRefresh}
+              disabled={refreshing}
+              activeOpacity={0.7}
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color={Colors.light.primary} />
+              ) : (
+                <MaterialIcons name="refresh" size={18} color={Colors.light.primary} />
+              )}
+            </TouchableOpacity>
             {/* Sync Status Indicator */}
             {pendingCount > 0 && (
               <TouchableOpacity
@@ -495,6 +504,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
+  },
+  syncBadgeActive: {
+    backgroundColor: Colors.light.primary + '20',
   },
   syncBadgeText: {
     fontSize: FontSize.xs,

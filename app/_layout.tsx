@@ -18,7 +18,7 @@ import { Colors, DeviceType } from '@/constants/theme';
 import { Sidebar } from '@/components/Sidebar';
 
 function AuthNavigator() {
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -51,7 +51,11 @@ function AuthNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="(tabs)" 
+        key={user?._id || 'unauthenticated'}
+        options={{ headerShown: false }} 
+      />
       <Stack.Screen
         name="modal"
         options={{
@@ -185,10 +189,6 @@ function AuthNavigator() {
     </>
   );
 }
-
-export const unstable_settings = {
-  initialRouteName: '(tabs)',
-};
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
