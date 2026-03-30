@@ -29,7 +29,7 @@ export interface SaleItem {
 export interface Sale {
   _id: string;
   clientTempId?: string;
-  items: SaleItem[];
+  items?: SaleItem[];
   total: number;
   totalAmount?: number;
   ledgerId?: string;
@@ -42,6 +42,7 @@ export interface Sale {
   recordedAtClient?: string;
   createdAt: string;
   updatedAt?: string;
+  type?: 'sale' | 'payment';
 }
 
 export interface CreateProductRequest {

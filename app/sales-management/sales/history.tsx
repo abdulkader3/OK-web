@@ -304,22 +304,32 @@ export default function SalesHistoryScreen() {
           </View>
         )}
       </View>
-      {item.sales.map(sale => (
+      {item.sales.map(sale => {
+        const isPayment = sale.type === 'payment' || !sale.items;
+        return (
         <TouchableOpacity
           key={sale._id}
           style={styles.saleCard}
-          onPress={() => router.push(`/sales-management/sales/${sale._id}`)}
+          onPress={() => isPayment && sale.ledgerId ? router.push(`/ledger/${sale.ledgerId}`) : router.push(`/sales-management/sales/${sale._id}`)}
           activeOpacity={0.7}
         >
           <View style={styles.saleHeader}>
             <View style={styles.saleInfo}>
               <View style={styles.saleTopRow}>
                 <Text style={styles.saleTotal}>{formatCurrency(sale.totalAmount || sale.total || 0)}</Text>
+                {isPayment ? (
+                  <View style={[styles.paymentStatusBadge, styles.paidStatusBadge]}>
+                    <Text style={[styles.paymentStatusText, styles.paidStatusText]}>
+                      {t('sales.paymentReceived')}
+                    </Text>
+                  </View>
+                ) : (
                 <View style={[styles.paymentStatusBadge, sale.paymentStatus === 'not_paid' ? styles.unpaidStatusBadge : styles.paidStatusBadge]}>
                   <Text style={[styles.paymentStatusText, sale.paymentStatus === 'not_paid' ? styles.unpaidStatusText : styles.paidStatusText]}>
                     {sale.paymentStatus === 'not_paid' ? t('sales.pdf.notPaid') : t('sales.pdf.paid')}
                   </Text>
                 </View>
+                )}
               </View>
               <Text style={styles.saleTime}>{formatTime(sale.createdAt)}</Text>
             </View>
@@ -332,7 +342,7 @@ export default function SalesHistoryScreen() {
           </View>
           <View style={styles.saleDetails}>
             <Text style={styles.itemCount}>
-              {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'}
+              {isPayment ? t('sales.payment') : `${sale.items?.length || 0} ${(sale.items?.length || 0) === 1 ? 'item' : 'items'}`}
             </Text>
             {sale.ledgerName && (
               <View style={styles.customerBadge}>
@@ -342,7 +352,7 @@ export default function SalesHistoryScreen() {
             )}
           </View>
         </TouchableOpacity>
-      ))}
+      )})}
     </View>
   );
 
