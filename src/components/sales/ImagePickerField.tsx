@@ -4,15 +4,18 @@ import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { uploadReceiptWithFile } from '@/src/services/salesApi';
 
 interface ImagePickerFieldProps {
   label: string;
   value?: string;
   onChange: (uri: string | undefined) => void;
+  onUrlChange?: (url: string | undefined) => void;
 }
 
-export function ImagePickerField({ label, value, onChange }: ImagePickerFieldProps) {
+export function ImagePickerField({ label, value, onChange, onUrlChange }: ImagePickerFieldProps) {
   const [showActionSheet, setShowActionSheet] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const requestPermission = async (): Promise<boolean> => {
     try {
@@ -55,6 +58,22 @@ export function ImagePickerField({ label, value, onChange }: ImagePickerFieldPro
     }
   };
 
+  const uploadImage = async (file: File) => {
+    try {
+      setIsUploading(true);
+      const response = await uploadReceiptWithFile(file);
+      if (response.success && response.data?.url) {
+        onUrlChange?.(response.data.url);
+        return response.data.url;
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+    } finally {
+      setIsUploading(false);
+    }
+    return undefined;
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -65,6 +84,12 @@ export function ImagePickerField({ label, value, onChange }: ImagePickerFieldPro
 
     if (!result.canceled && result.assets[0]) {
       onChange(result.assets[0].uri);
+      if (Platform.OS === 'web' && onUrlChange) {
+        const file = result.assets[0].file;
+        if (file) {
+          await uploadImage(file);
+        }
+      }
     }
   };
 
@@ -91,9 +116,19 @@ export function ImagePickerField({ label, value, onChange }: ImagePickerFieldPro
           style={styles.picker} 
           onPress={showOptions}
           activeOpacity={0.7}
+          disabled={isUploading}
         >
-          <MaterialIcons name="add-a-photo" size={32} color={Colors.light.textMuted} />
-          <Text style={styles.pickerText}>Tap to add image</Text>
+          {isUploading ? (
+            <>
+              <MaterialIcons name="hourglass-empty" size={32} color={Colors.light.textMuted} />
+              <Text style={styles.pickerText}>Uploading...</Text>
+            </>
+          ) : (
+            <>
+              <MaterialIcons name="add-a-photo" size={32} color={Colors.light.textMuted} />
+              <Text style={styles.pickerText}>Tap to add image</Text>
+            </>
+          )}
         </TouchableOpacity>
       )}
 

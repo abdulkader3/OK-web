@@ -12,7 +12,7 @@ const LAST_SYNC_KEY = '@sales_last_sync';
 export interface PendingUpload {
   id: string;
   localUri: string;
-  uploadedUrl?: string;  // Store Cloudinary URL after upload
+  uploadedUrl?: string;
   targetType: 'product';
   targetId: string;
   status: 'pending' | 'uploading' | 'failed' | 'completed';
@@ -157,7 +157,6 @@ export async function uploadPendingImages(): Promise<{ uploaded: number; failed:
       const response = await uploadReceipt(upload.localUri);
       
       if (response.success && response.data) {
-        // Store the uploaded URL for use in sync
         await updatePendingUpload(upload.id, { 
           status: 'completed',
           uploadedUrl: response.data.url 
@@ -171,6 +170,7 @@ export async function uploadPendingImages(): Promise<{ uploaded: number; failed:
         failed++;
       }
     } catch (error) {
+      console.error('[Sync] Image upload failed:', upload.localUri, error);
       await updatePendingUpload(upload.id, { 
         status: 'failed', 
         retryCount: upload.retryCount + 1 
@@ -197,6 +197,7 @@ export async function syncSalesBatch(): Promise<SyncResult> {
 
   // Step 2: Get completed uploads to use their URLs in sync
   const completedUploads = await getPendingUploads();
+  console.log('[Sync] Completed uploads:', completedUploads.filter(u => u.status === 'completed').map(u => ({ targetId: u.targetId, uploadedUrl: u.uploadedUrl })));
   const uploadUrls = new Map(
     completedUploads
       .filter(u => u.status === 'completed' && u.uploadedUrl)
@@ -208,6 +209,7 @@ export async function syncSalesBatch(): Promise<SyncResult> {
     .map(item => {
       if (item.type === 'product') {
         const imageUrl = uploadUrls.get(item.clientTempId) || item.data.imageUrl || null;
+        console.log('[Sync] Product imageUrl lookup:', { clientTempId: item.clientTempId, uploadUrl: uploadUrls.get(item.clientTempId), fallback: item.data.imageUrl, result: imageUrl });
         const isUpdate = !!item.serverId;
         
         return {

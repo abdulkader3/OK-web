@@ -19,6 +19,7 @@ export default function AddProductScreen() {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [imageUri, setImageUri] = useState<string | undefined>();
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [errors, setErrors] = useState<{ name?: string; price?: string }>({});
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
@@ -45,6 +46,7 @@ export default function AddProductScreen() {
       name: name.trim(),
       price: parseFloat(price),
       imageUri,
+      imageUrl,
     });
 
     router.back();
@@ -91,6 +93,7 @@ export default function AddProductScreen() {
               label={t('sales.productImage')}
               value={imageUri}
               onChange={setImageUri}
+              onUrlChange={setImageUrl}
             />
 
             <View style={styles.inputGroup}>

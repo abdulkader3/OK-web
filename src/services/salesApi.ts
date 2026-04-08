@@ -173,6 +173,13 @@ export async function uploadReceipt(imageUri: string): Promise<ApiResponse<{ url
   return apiClient.post<{ url: string; publicId: string }>('/api/uploads/receipt', formData);
 }
 
+export async function uploadReceiptWithFile(file: File): Promise<ApiResponse<{ url: string; publicId: string }>> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiClient.post<{ url: string; publicId: string }>('/api/uploads/receipt', formData);
+}
+
 // Sync API
 export async function syncBatch(batch: SyncBatchRequest): Promise<ApiResponse<SyncBatchResponse>> {
   return apiClient.post<SyncBatchResponse>('/api/sync/batch', batch);

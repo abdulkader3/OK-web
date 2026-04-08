@@ -250,14 +250,8 @@ export function SalesProvider({ children }: { children: ReactNode }) {
       createdAt: now,
     };
 
-    const imageUrl = productData.imageUri 
-      ? await uploadProductImage(productData.imageUri, clientTempId) 
-      : undefined;
-
-    const productWithImage = imageUrl ? { ...newProduct, imageUrl } : newProduct;
-
     // Add to local storage immediately
-    const newProducts = [...products, productWithImage];
+    const newProducts = [...products, newProduct];
     setProducts(newProducts);
     await saveProducts(newProducts);
 
@@ -267,9 +261,9 @@ export function SalesProvider({ children }: { children: ReactNode }) {
       clientTempId,
       idempotencyKey,
       data: {
-        name: productWithImage.name,
-        price: productWithImage.price,
-        imageUrl: productWithImage.imageUrl,
+        name: newProduct.name,
+        price: newProduct.price,
+        imageUrl: newProduct.imageUrl,
       },
       status: 'pending',
     });
@@ -278,26 +272,11 @@ export function SalesProvider({ children }: { children: ReactNode }) {
 
     triggerDebouncedSync();
 
-    return productWithImage;
+    return newProduct;
   };
 
-  const uploadProductImage = async (localUri: string, productId: string): Promise<string | undefined> => {
-    try {
-      // For now, we'll store the local URI and queue for upload
-      // The actual upload happens during sync
-      await addPendingUpload({
-        id: uuidv4(),
-        localUri,
-        targetType: 'product',
-        targetId: productId,
-        status: 'pending',
-      });
-      // Return null for now - the server will assign the URL after upload
-      return undefined;
-    } catch (error) {
-      console.error('Failed to queue image upload:', error);
-      return undefined;
-    }
+  const uploadProductImage = async (localUri: string, productId: string, file?: File): Promise<string | undefined> => {
+    return undefined;
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
