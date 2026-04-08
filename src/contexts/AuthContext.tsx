@@ -69,15 +69,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const response = await Promise.race([
-        apiClient.get<{ user: User }>('/api/auth/me'),
+        apiClient.get<{ user: User; access_token: string; refresh_token: string }>('/api/users/me'),
         new Promise<null>((_, reject) => 
           setTimeout(() => reject(new Error('Timeout')), 5000)
         )
       ]);
       
-      if (response && response.success && response.data?.user) {
-        setUser(response.data.user);
-        await storage.setItem(USER_KEY, JSON.stringify(response.data.user));
+      if (response && response.success && response.data?.data?.user) {
+        const { user, access_token } = response.data.data;
+        
+        if (access_token) {
+          await storage.setItem(TOKEN_KEY, access_token);
+          apiClient.setAuthToken(access_token);
+        }
+        
+        setUser(user);
+        await storage.setItem(USER_KEY, JSON.stringify(user));
       }
     } catch {
       // Silent fail - keep cached user if available

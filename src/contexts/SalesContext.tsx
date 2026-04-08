@@ -137,7 +137,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
           console.error('[SalesContext] Debounced sync failed:', error);
         });
       }
-    }, 60000);
+    }, 120000);
   }, [isSyncing]);
 
   useEffect(() => {
