@@ -116,7 +116,7 @@ export function generateSalesPDFHtml(
     <tr>
       <td style="font-weight:500">${formatDateTime(sale.createdAt)}</td>
       <td>
-        ${sale.items.map((item) => `<div>${item.name || item.productName || "Item"} x${item.quantity}</div>`).join("")}
+        ${(sale.items || []).map((item) => `<div>${item.name || item.productName || "Item"} x${item.quantity}</div>`).join("")}
       </td>
       <td style="text-align:right">${formatCurrency(sale.totalAmount || sale.total || 0, currency)}</td>
       <td>
@@ -375,7 +375,7 @@ export function generateSingleSalePDFHtml(
 
   const isPaid = sale.ledgerId ? false : sale.paymentStatus !== "not_paid";
 
-  const itemsRows = sale.items
+  const itemsRows = (sale.items || [])
     .map(
       (item) => `
       <div class="table-row">
@@ -402,71 +402,86 @@ export function generateSingleSalePDFHtml(
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: monospace;
-      background: #e5e7eb;
-      padding: 40px;
+      background: #f3f4f6;
+      padding: 20px;
       display: flex;
       justify-content: center;
     }
     .receipt {
-      width: 600px;
+      width: 300px;
       background: #fff;
-      padding: 40px 32px;
+      padding: 15px 10px;
       color: #000;
     }
     .center { text-align: center; }
     .bold { font-weight: bold; }
     .title {
-      font-size: 28px;
+      font-size: 18px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .subtitle {
-      font-size: 16px;
-      margin-bottom: 4px;
+      font-size: 11px;
+      margin-bottom: 3px;
     }
-    .small { font-size: 15px; }
-    .space { margin: 16px 0; }
+    .small { font-size: 10px; }
+    .space { margin: 10px 0; }
     .row {
       display: flex;
       justify-content: space-between;
-      font-size: 17px;
-      margin: 8px 0;
+      font-size: 11px;
+      margin: 5px 0;
     }
     .table {
       width: 100%;
-      margin-top: 20px;
-      font-size: 16px;
+      margin-top: 12px;
+      font-size: 11px;
     }
     .table-header {
       display: grid;
       grid-template-columns: 2fr 0.8fr 1fr 0.8fr 1fr;
       font-weight: bold;
       border-bottom: 2px dashed #000;
-      padding-bottom: 8px;
-      font-size: 18px;
+      padding-bottom: 5px;
+      font-size: 11px;
     }
     .table-row {
       display: grid;
       grid-template-columns: 2fr 0.8fr 1fr 0.8fr 1fr;
-      margin-top: 12px;
-      font-size: 17px;
+      margin-top: 8px;
+      font-size: 11px;
     }
     .line {
       border-top: 2px dashed #000;
-      margin: 16px 0;
+      margin: 10px 0;
     }
     .big-total {
-      font-size: 22px;
+      font-size: 14px;
       font-weight: bold;
     }
     .barcode {
       text-align: center;
-      font-size: 28px;
-      margin: 24px 0;
-      letter-spacing: 4px;
+      font-size: 18px;
+      margin: 15px 0;
+      letter-spacing: 2px;
     }
     .footer-text {
-      font-size: 16px;
+      font-size: 10px;
+    }
+    @media print {
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body {
+        background: #fff;
+        padding: 0;
+        display: block;
+      }
+      .receipt {
+        width: 100%;
+        max-width: 300px;
+        margin: 0;
+        padding: 10px;
+        box-shadow: none;
+      }
     }
   </style>
 </head>
@@ -506,7 +521,7 @@ export function generateSingleSalePDFHtml(
 
     <div class="line"></div>
 
-    <div class="row"><span>Items :</span><span>${sale.items.length}</span></div>
+    <div class="row"><span>Items :</span><span>${sale.items?.length ?? 0}</span></div>
 
     <div class="row">
       <span>Temporary Bill</span>
