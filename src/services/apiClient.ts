@@ -72,6 +72,7 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     console.log('[API] Request:', options.method || 'GET', url);
+    console.log('[API] Query string:', endpoint.includes('?') ? endpoint.split('?')[1] : 'none');
     
     const { idempotencyKey, ...fetchOptions } = options;
 

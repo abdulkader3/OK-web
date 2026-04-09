@@ -78,7 +78,12 @@ export async function getLedgers(filters?: LedgerFilters): Promise<LedgersRespon
   const queryString = params.toString();
   const endpoint = queryString ? `/api/ledgers?${queryString}` : '/api/ledgers';
   
+  console.log('[getLedgers] Calling API with endpoint:', endpoint);
+  console.log('[getLedgers] Filters:', JSON.stringify(filters));
+  
   const response = await apiClient.get<LedgersResponse>(endpoint);
+  console.log('[getLedgers] Response success:', response.success, 'data:', response.data ? 'present' : 'none');
+  
   if (response.success && response.data) {
     return response.data;
   }

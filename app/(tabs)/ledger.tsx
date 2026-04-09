@@ -46,7 +46,10 @@ export default function LedgerScreen() {
             if (dateFrom) filters.dueDateFrom = dateFrom;
             if (dateTo) filters.dueDateTo = dateTo;
             
+            console.log('[LedgerScreen] fetchLedgers called with searchText:', searchText, 'filters:', JSON.stringify(filters));
+            
             const response = await getLedgers(filters as any);
+            console.log('[LedgerScreen] getLedgers returned', response.ledgers?.length || 0, 'ledgers');
             setLedgers(response.ledgers || []);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load ledgers');
