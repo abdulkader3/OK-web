@@ -109,7 +109,7 @@ export default function RecordPaymentModal() {
       setShowAlert(true);
       return;
     }
-    if (!initialAmount || parseFloat(initialAmount) <= 0) {
+    if (!initialAmount || parseFloat(initialAmount) < 0) {
       setAlertConfig({ variant: 'error', title: t('common.error'), message: t('modal.pleaseEnterValidAmount') });
       setShowAlert(true);
       return;
