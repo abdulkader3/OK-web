@@ -5,7 +5,15 @@ export async function printHTML(html: string): Promise<void> {
   if (Platform.OS === 'web') {
     return printHTMLWeb(html);
   }
-  return Print.printAsync({ html });
+  return Print.printAsync({
+    html,
+    margins: {
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+    },
+  });
 }
 
 function printHTMLWeb(html: string): Promise<void> {
@@ -22,8 +30,22 @@ function printHTMLWeb(html: string): Promise<void> {
 
     console.log('Print window opened, writing content...');
     
+    const printStyles = `
+      <style>
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
+        html, body {
+          height: auto !important;
+          min-height: auto !important;
+          overflow: visible !important;
+        }
+      </style>
+    `;
+    
     try {
-      printWindow.document.write(html);
+      printWindow.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' + printStyles + '</head><body>' + html + '</body></html>');
       printWindow.document.close();
       console.log('Content written to print window');
     } catch (writeErr) {

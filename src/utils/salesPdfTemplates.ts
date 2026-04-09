@@ -382,7 +382,6 @@ export function generateSingleSalePDFHtml(
         <div>${item.productName || item.name || "Item"}</div>
         <div>${item.quantity}</div>
         <div>${(item.productPrice || item.price || 0).toFixed(2)}</div>
-        <div>0.00</div>
         <div>${(item.subtotal || (item.quantity * (item.productPrice || item.price || 0))).toFixed(2)}</div>
       </div>
     `
@@ -401,72 +400,72 @@ export function generateSingleSalePDFHtml(
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: monospace;
+      font-family: "Courier New", Courier, monospace;
       background: #f3f4f6;
-      padding: 10mm;
+      padding: 5mm;
       display: flex;
       justify-content: center;
     }
     .receipt {
       width: 72mm;
       background: #fff;
-      padding: 10px;
+      padding: 3mm;
       color: #000;
     }
     .center { text-align: center; }
     .bold { font-weight: bold; }
     .title {
-      font-size: 18px;
+      font-size: 4mm;
       font-weight: bold;
-      margin-bottom: 6px;
+      margin-bottom: 2mm;
     }
     .subtitle {
-      font-size: 11px;
-      margin-bottom: 3px;
+      font-size: 2.5mm;
+      margin-bottom: 1mm;
     }
-    .small { font-size: 10px; }
-    .space { margin: 10px 0; }
+    .small { font-size: 2mm; }
+    .space { margin: 3mm 0; }
     .row {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
-      margin: 5px 0;
+      font-size: 2.5mm;
+      margin: 1.5mm 0;
     }
     .table {
       width: 100%;
-      margin-top: 12px;
-      font-size: 11px;
+      margin-top: 3mm;
+      font-size: 2.5mm;
     }
     .table-header {
       display: grid;
-      grid-template-columns: 2fr 0.8fr 1fr 0.8fr 1fr;
+      grid-template-columns: 2fr 0.8fr 1fr 1fr;
       font-weight: bold;
-      border-bottom: 2px dashed #000;
-      padding-bottom: 5px;
-      font-size: 11px;
+      border-bottom: 1px dashed #000;
+      padding-bottom: 2mm;
+      font-size: 2.5mm;
     }
     .table-row {
       display: grid;
-      grid-template-columns: 2fr 0.8fr 1fr 0.8fr 1fr;
-      margin-top: 8px;
-      font-size: 11px;
+      grid-template-columns: 2fr 0.8fr 1fr 1fr;
+      margin-top: 2mm;
+      font-size: 2.5mm;
     }
     .line {
-      border-top: 2px dashed #000;
-      margin: 10px 0;
+      border-top: 1px dashed #000;
+      margin: 3mm 0;
     }
     .big-total {
-      font-size: 14px;
+      font-size: 3mm;
       font-weight: bold;
     }
     .barcode {
       text-align: center;
-      font-size: 18px;
-      margin: 15px 0;
-      letter-spacing: 2px;
+      font-size: 4mm;
+      margin: 3mm 0;
+      letter-spacing: 1mm;
     }
     .footer-text {
-      font-size: 10px;
+      font-size: 2mm;
     }
     @media print {
       @page {
@@ -477,6 +476,7 @@ export function generateSingleSalePDFHtml(
       html, body {
         height: auto;
         min-height: auto;
+        overflow: visible;
       }
       body {
         background: #fff;
@@ -487,7 +487,7 @@ export function generateSingleSalePDFHtml(
         width: 72mm;
         max-width: 72mm;
         margin: 0;
-        padding: 5px;
+        padding: 2mm;
         box-shadow: none;
         page-break-inside: avoid;
         break-inside: avoid;
@@ -517,7 +517,6 @@ export function generateSingleSalePDFHtml(
         <div>Item</div>
         <div>Qty</div>
         <div>Price</div>
-        <div>VAT</div>
         <div>Total</div>
       </div>
 
