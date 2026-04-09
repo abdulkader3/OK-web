@@ -6,7 +6,7 @@ export default function Root({ children }: PropsWithChildren) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="theme-color" content="#E6F4FE" />
         <meta name="description" content="BossBook - Ledger, Sales & Payments Management" />
 
