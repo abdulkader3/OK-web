@@ -403,14 +403,14 @@ export function generateSingleSalePDFHtml(
     body {
       font-family: monospace;
       background: #f3f4f6;
-      padding: 20px;
+      padding: 10mm;
       display: flex;
       justify-content: center;
     }
     .receipt {
-      width: 300px;
+      width: 72mm;
       background: #fff;
-      padding: 15px 10px;
+      padding: 10px;
       color: #000;
     }
     .center { text-align: center; }
@@ -469,18 +469,28 @@ export function generateSingleSalePDFHtml(
       font-size: 10px;
     }
     @media print {
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body {
+        height: auto;
+        min-height: auto;
+      }
       body {
         background: #fff;
         padding: 0;
         display: block;
       }
       .receipt {
-        width: 100%;
-        max-width: 300px;
+        width: 72mm;
+        max-width: 72mm;
         margin: 0;
-        padding: 10px;
+        padding: 5px;
         box-shadow: none;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
     }
   </style>
